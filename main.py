@@ -1,6 +1,6 @@
 from datetime import datetime
 from src.data.data_fetcher import FutuDataFetcher
-from src.strategy.base_strategy import MovingAverageCrossStrategy
+from src.strategy.moving_average_cross import MovingAverageCrossStrategy
 from src.engine.backtest_engine import BacktestEngine
 from src.utils.config import Config
 from src.utils.logger import setup_logger
@@ -38,7 +38,8 @@ def main():
     )
     
     results = engine.run(data)
-    logger.info(f"Backtest Results: {results}")
+    report_path = results.generate_report()
+    logger.info(f"Backtest report generated at: {report_path}")
 
 if __name__ == '__main__':
     main()
