@@ -1,0 +1,6 @@
+futu-api
+pandas
+numpy
+pyyaml
+pytest
+typing-extensions 

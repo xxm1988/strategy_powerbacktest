@@ -1,0 +1,48 @@
+# Futu OpenAPI Configuration
+futu:
+  host: "localhost"
+  port: 11111
+  quote_ctx_timeout: 30
+  trade_ctx_timeout: 30
+  retry_count: 3
+
+# Backtesting Configuration
+backtest:
+  initial_capital: 100000.0
+  commission: 0.001
+  slippage: 0.0001
+  position_size: 1.0
+  max_positions: 5
+  risk_free_rate: 0.02
+
+# Data Configuration
+data:
+  storage:
+    type: "sqlite"  # Options: sqlite, csv, memory
+    db_path: "data/market_data.db"
+    cache_size: 1000
+  timeframes:
+    - "1m"
+    - "5m"
+    - "15m"
+    - "30m"
+    - "1h"
+    - "1d"
+
+# Strategy Default Parameters
+strategy:
+  moving_average_cross:
+    short_window: 20
+    long_window: 50
+    min_volume: 1000000
+  
+  rsi:
+    period: 14
+    overbought: 70
+    oversold: 30
+
+# Logging Configuration
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  file: "logs/backtest.log"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s" 
