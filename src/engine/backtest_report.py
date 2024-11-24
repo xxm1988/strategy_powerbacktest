@@ -21,9 +21,14 @@ class BacktestReport:
     trades: pd.DataFrame
     equity_curve: pd.Series
     monthly_returns: pd.Series
+    realized_pnl: float
+    floating_pnl: float
+    total_pnl: float
+    total_trades: int
+    open_positions: int
     
     @classmethod
-    def from_backtest_results(cls, portfolio: pd.DataFrame, trades: List[Dict], initial_capital: float):
+    def from_backtest_results(cls, portfolio: pd.DataFrame, trades: List[Dict], initial_capital: float, metrics: Dict[str, Any]):
         """Create a backtest report from raw backtest results"""
         equity_curve = portfolio['total']
         returns = portfolio['returns']
@@ -32,46 +37,29 @@ class BacktestReport:
         if not isinstance(returns.index, pd.DatetimeIndex):
             raise ValueError("Portfolio returns must have a DatetimeIndex")
         
-        # Calculate metrics
-        final_value = equity_curve.iloc[-1]
-        total_return = (final_value - initial_capital) / initial_capital * 100
-        annual_return = (1 + total_return/100) ** (252/len(returns)) - 1
-        
-        # Risk metrics
-        excess_returns = returns - 0.02/252  # Assuming 2% risk-free rate
-        sharpe_ratio = np.sqrt(252) * excess_returns.mean() / excess_returns.std()
-        
-        # Drawdown
-        rolling_max = equity_curve.expanding().max()
-        drawdowns = (equity_curve - rolling_max) / rolling_max
-        max_drawdown = drawdowns.min() * 100
-        
-        # Trade statistics
-        trades_df = pd.DataFrame(trades)
-        winning_trades = trades_df[trades_df['pnl'] > 0]
-        win_rate = len(winning_trades) / len(trades_df) * 100 if len(trades_df) > 0 else 0
-        
-        # Profit factor
-        gross_profit = winning_trades['pnl'].sum() if len(winning_trades) > 0 else 0
-        losing_trades = trades_df[trades_df['pnl'] < 0]
-        gross_loss = abs(losing_trades['pnl'].sum()) if len(losing_trades) > 0 else 0
-        profit_factor = gross_profit / gross_loss if gross_loss != 0 else float('inf')
-        
         # Monthly returns using 'ME' (month end) frequency
         monthly_returns = returns.resample('ME').apply(lambda x: (1 + x).prod() - 1)
         
+        # Create trades DataFrame
+        trades_df = pd.DataFrame(trades)
+        
         return cls(
             initial_capital=initial_capital,
-            final_portfolio_value=final_value,
-            total_return=total_return,
-            annual_return=annual_return * 100,
-            sharpe_ratio=sharpe_ratio,
-            max_drawdown=max_drawdown,
-            win_rate=win_rate,
-            profit_factor=profit_factor,
+            final_portfolio_value=portfolio['total'].iloc[-1],
+            total_return=metrics['total_return'] * 100,  # Convert to percentage
+            annual_return=metrics['annual_return'] * 100,  # Convert to percentage
+            sharpe_ratio=metrics['sharpe_ratio'],
+            max_drawdown=metrics['max_drawdown'] * 100,  # Convert to percentage
+            win_rate=metrics['win_rate'] * 100,  # Convert to percentage
+            profit_factor=metrics['total_pnl'] / abs(metrics['realized_pnl']) if metrics['realized_pnl'] < 0 else float('inf'),
             trades=trades_df,
             equity_curve=equity_curve,
-            monthly_returns=monthly_returns
+            monthly_returns=monthly_returns,
+            realized_pnl=metrics['realized_pnl'],
+            floating_pnl=metrics['floating_pnl'],
+            total_pnl=metrics['total_pnl'],
+            total_trades=metrics['total_trades'],
+            open_positions=metrics['open_positions']
         )
     
     def generate_report(self, output_dir: str = "reports") -> str:
@@ -115,7 +103,11 @@ class BacktestReport:
             "Maximum Drawdown": f"{self.max_drawdown:.2f}%",
             "Win Rate": f"{self.win_rate:.2f}%",
             "Profit Factor": f"{self.profit_factor:.2f}",
-            "Number of Trades": f"{len(self.trades)}"
+            "Number of Trades": f"{self.total_trades}",
+            "Realized PnL": f"${self.realized_pnl:,.2f}",
+            "Floating PnL": f"${self.floating_pnl:,.2f}",
+            "Total PnL": f"${self.total_pnl:,.2f}",
+            "Open Positions": f"{self.open_positions}"
         }
     
     def _generate_plots(self, output_dir: str):
