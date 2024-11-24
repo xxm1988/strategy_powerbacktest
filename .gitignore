@@ -103,3 +103,4 @@ backtest_results/
 optimization_results/
 strategy_results/
 strategy_powerbacktest/
+reports/

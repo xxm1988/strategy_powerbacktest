@@ -7,8 +7,6 @@ from src.utils.logger import setup_logger
 from .backtest_report import BacktestReport
 from .portfolio import Portfolio
 
-logger = setup_logger(__name__)
-
 class BacktestEngine:
     def __init__(
         self,
@@ -22,24 +20,34 @@ class BacktestEngine:
         self.portfolio = pd.DataFrame()
         self.positions = pd.DataFrame()
         self.trades = []
+        self.logger = setup_logger(__name__)
         
     def run(self, data: pd.DataFrame) -> BacktestReport:
-        """
-        Run backtest on historical data
+        """Run backtest on historical data"""
+        # Log backtest initialization
+        start_date = pd.to_datetime(data['time_key'].iloc[0]).strftime('%Y-%m-%d')
+        end_date = pd.to_datetime(data['time_key'].iloc[-1]).strftime('%Y-%m-%d')
         
-        Args:
-            data: Historical market data
-            
-        Returns:
-            BacktestReport object containing detailed results
-        """
+        self.logger.info(f"Starting backtest for {data['name'].iloc[0]}) from {start_date} to {end_date}")
+        self.logger.info(f"Strategy: {self.strategy.__class__.__name__}")
+        self.logger.info(f"Initial capital: ${self.initial_capital:,.2f}")
+        self.logger.info(f"Commission rate: {self.commission*100:.2f}%")
+        
         signals = self.strategy.generate_signals(data)
+        self.logger.info("Generated trading signals")
+        
         self.portfolio = self._calculate_portfolio(data, signals)
+        self.logger.info("Calculated portfolio values")
         
-        # Generate trades list
         trades = self._generate_trades_list(data, signals)
+        self.logger.info(f"Generated {len(trades)} trades")
         
-        # Create and return backtest report
+        # Log final results
+        final_value = self.portfolio['total'].iloc[-1]
+        total_return = (final_value - self.initial_capital) / self.initial_capital * 100
+        self.logger.info(f"Backtest completed. Final portfolio value: ${final_value:,.2f}")
+        self.logger.info(f"Total return: {total_return:.2f}%")
+        
         report = BacktestReport.from_backtest_results(
             portfolio=self.portfolio,
             trades=trades,
@@ -53,28 +61,44 @@ class BacktestEngine:
         data: pd.DataFrame,
         signals: pd.Series
     ) -> pd.DataFrame:
-        """
-        Calculate portfolio value over time
-        
-        Args:
-            data: Historical market data
-            signals: Trading signals series
-            
-        Returns:
-            DataFrame with portfolio values and returns
-        """
-        # Create portfolio DataFrame with datetime index
+        """Calculate portfolio value over time"""
         portfolio = pd.DataFrame(index=data.index)
         
         # Ensure the index is datetime
         if not isinstance(portfolio.index, pd.DatetimeIndex):
             portfolio.index = pd.to_datetime(portfolio.index)
         
-        # Calculate portfolio values
-        portfolio['holdings'] = signals.shift(1) * data['close']
-        portfolio['cash'] = self.initial_capital - (
-            signals.diff() * data['close'] * (1 + self.commission)
-        ).cumsum()
+        # Track positions and cash
+        portfolio['position'] = 0  # Number of units held
+        portfolio['close'] = data['close']
+        
+        # Initialize cash with initial capital
+        portfolio['cash'] = self.initial_capital
+        
+        # Process signals and update portfolio
+        current_position = 0
+        for i in range(1, len(signals)):
+            if signals[i] == 1 and current_position == 0:  # Buy signal
+                # Buy 1 unit
+                cost = data['close'].iloc[i] * (1 + self.commission)
+                if portfolio['cash'].iloc[i-1] >= cost:
+                    current_position = 1
+                    portfolio.loc[portfolio.index[i:], 'position'] = 1
+                    portfolio.loc[portfolio.index[i], 'cash'] = portfolio['cash'].iloc[i-1] - cost
+            elif signals[i] == -1 and current_position > 0:  # Sell signal
+                # Sell all units
+                proceeds = current_position * data['close'].iloc[i] * (1 - self.commission)
+                current_position = 0
+                portfolio.loc[portfolio.index[i:], 'position'] = 0
+                portfolio.loc[portfolio.index[i], 'cash'] = portfolio['cash'].iloc[i-1] + proceeds
+            else:
+                portfolio.loc[portfolio.index[i], 'cash'] = portfolio['cash'].iloc[i-1]
+        
+        # Forward fill cash values
+        portfolio['cash'] = portfolio['cash'].fillna(method='ffill')
+        
+        # Calculate holdings value and total portfolio value
+        portfolio['holdings'] = portfolio['position'] * portfolio['close']
         portfolio['total'] = portfolio['cash'] + portfolio['holdings']
         portfolio['returns'] = portfolio['total'].pct_change(fill_method=None)
         
@@ -102,51 +126,77 @@ class BacktestEngine:
         return metrics
         
     def _generate_trades_list(self, data: pd.DataFrame, signals: pd.Series) -> List[Dict]:
-        """
-        Generate list of trades from signals
-        
-        Args:
-            data: Historical market data
-            signals: Trading signals series
-            
-        Returns:
-            List of trade dictionaries
-        """
+        """Generate list of trades from signals"""
         trades = []
-        position = 0
+        current_position = 0
+        last_buy_price = 0
+        realized_pnl = 0
         
-        # Iterate through signals to identify trades
         for i in range(1, len(signals)):
-            signal_change = signals[i] - signals[i-1]
-            
-            if signal_change != 0:  # Trade occurred
+            if signals[i] == 1 and current_position == 0:  # Buy signal
                 price = data['close'].iloc[i]
-                timestamp = data.index[i]
+                timestamp = data['time_key'].iloc[i]
+                cost = price * (1 + self.commission)
                 
-                # Calculate trade details
-                quantity = signal_change
-                cost = abs(quantity * price)
-                commission_cost = cost * self.commission
-                
-                trades.append({
+                trade = {
                     'timestamp': timestamp,
-                    'type': 'buy' if quantity > 0 else 'sell',
+                    'type': 'buy',
                     'price': price,
-                    'quantity': abs(quantity),
+                    'quantity': 1,
                     'cost': cost,
-                    'commission': commission_cost,
-                    'pnl': 0  # Will be calculated later
-                })
+                    'commission': cost - price
+                }
+                trades.append(trade)
+                current_position = 1
+                last_buy_price = price
                 
-                position += quantity
+                self.logger.info(
+                    f"Trade executed at {timestamp}: BUY "
+                    f"1 unit at ${price:.2f} "
+                    f"(Cost: ${cost:,.2f}, Commission: ${cost - price:.2f})"
+                )
+                
+            elif signals[i] == -1 and current_position > 0:  # Sell signal
+                price = data['close'].iloc[i]
+                timestamp = data['time_key'].iloc[i]
+                proceeds = price * (1 - self.commission)
+                trade_pnl = proceeds - last_buy_price * (1 + self.commission)
+                realized_pnl += trade_pnl
+                
+                trade = {
+                    'timestamp': timestamp,
+                    'type': 'sell',
+                    'price': price,
+                    'quantity': current_position,
+                    'proceeds': proceeds,
+                    'commission': price - proceeds,
+                    'pnl': trade_pnl
+                }
+                trades.append(trade)
+                current_position = 0
+                
+                self.logger.info(
+                    f"Trade executed at {timestamp}: SELL "
+                    f"1 unit at ${price:.2f} "
+                    f"(Proceeds: ${proceeds:,.2f}, Commission: ${price - proceeds:.2f})"
+                )
+                self.logger.info(f"Trade PnL: ${trade_pnl:,.2f} (Running PnL: ${realized_pnl:,.2f})")
         
-        # Calculate PnL for each trade
-        running_position_cost = 0
-        for trade in trades:
-            if trade['type'] == 'buy':
-                running_position_cost += trade['cost']
-            else:  # sell
-                trade['pnl'] = (trade['cost'] - running_position_cost) - trade['commission']
-                running_position_cost = 0
-                
+        # Calculate floating PnL at the end of backtest period
+        if current_position > 0:
+            final_price = data['close'].iloc[-1]
+            floating_pnl = (final_price - last_buy_price) * current_position
+            self.logger.info(
+                f"\nEnd of Backtest Summary:"
+                f"\nRealized PnL: ${realized_pnl:,.2f}"
+                f"\nFloating PnL: ${floating_pnl:,.2f} (from {current_position} open position)"
+                f"\nTotal PnL: ${(realized_pnl + floating_pnl):,.2f}"
+            )
+        else:
+            self.logger.info(
+                f"\nEnd of Backtest Summary:"
+                f"\nRealized PnL: ${realized_pnl:,.2f}"
+                f"\nNo open positions"
+            )
+        
         return trades
