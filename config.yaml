@@ -41,6 +41,11 @@ strategy:
     overbought: 70
     oversold: 30
 
+  macd:
+    fast_period: 12
+    slow_period: 26
+    signal_period: 9
+
 # Logging Configuration
 logging:
   level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL

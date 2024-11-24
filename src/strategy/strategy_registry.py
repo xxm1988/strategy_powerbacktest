@@ -1,5 +1,6 @@
 from typing import Dict, Type
 from .base_strategy import BaseStrategy
+from .macd_strategy import MACDStrategy
 
 class StrategyRegistry:
     """

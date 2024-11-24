@@ -1,6 +1,6 @@
 from datetime import datetime
 from src.data.data_fetcher import FutuDataFetcher
-from src.strategy.moving_average_cross import MovingAverageCrossStrategy
+from src.strategy.macd_strategy import MACDStrategy
 from src.engine.backtest_engine import BacktestEngine
 from src.utils.config import Config
 from src.utils.logger import setup_logger
@@ -24,10 +24,11 @@ def main():
         end=datetime(2023, 12, 31)
     )
     
-    # Initialize strategy
-    strategy = MovingAverageCrossStrategy({
-        'short_window': config.strategy['moving_average_cross']['short_window'],
-        'long_window': config.strategy['moving_average_cross']['long_window']
+    # Initialize MACD strategy
+    strategy = MACDStrategy({
+        'fast_period': config.strategy['macd']['fast_period'],
+        'slow_period': config.strategy['macd']['slow_period'],
+        'signal_period': config.strategy['macd']['signal_period']
     })
     
     # Run backtest

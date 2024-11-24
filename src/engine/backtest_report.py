@@ -9,7 +9,7 @@ import os
 
 @dataclass
 class BacktestReport:
-    """Class for storing and formatting backtest results"""
+    """Enhanced backtest report with comprehensive analytics"""
     initial_capital: float
     final_portfolio_value: float
     total_return: float
@@ -62,31 +62,79 @@ class BacktestReport:
             open_positions=metrics['open_positions']
         )
     
+    def _group_metrics(self) -> Dict[str, List[Dict]]:
+        """Group metrics into logical categories"""
+        return {
+            "Portfolio Statistics": [
+                {"title": "Initial Capital", "value": f"${self.initial_capital:,.2f}"},
+                {"title": "Final Value", "value": f"${self.final_portfolio_value:,.2f}"},
+                {"title": "Total Return", "value": f"{self.total_return:.2f}%", 
+                 "color": "positive" if self.total_return > 0 else "negative"},
+                {"title": "Annual Return", "value": f"{self.annual_return:.2f}%"}
+            ],
+            "Risk Metrics": [
+                {"title": "Sharpe Ratio", "value": f"{self.sharpe_ratio:.2f}"},
+                {"title": "Maximum Drawdown", "value": f"{self.max_drawdown:.2f}%"},
+                {"title": "Win Rate", "value": f"{self.win_rate:.2f}%"},
+                {"title": "Profit Factor", "value": f"{self.profit_factor:.2f}"}
+            ],
+            "Trading Statistics": [
+                {"title": "Total Trades", "value": str(self.total_trades)},
+                {"title": "Realized P&L", "value": f"${self.realized_pnl:,.2f}",
+                 "color": "positive" if self.realized_pnl > 0 else "negative"},
+                {"title": "Floating P&L", "value": f"${self.floating_pnl:,.2f}",
+                 "color": "positive" if self.floating_pnl > 0 else "negative"},
+                {"title": "Open Positions", "value": str(self.open_positions)}
+            ]
+        }
+
+    def _prepare_trades_data(self) -> List[Dict]:
+        """Prepare trades data for DataTables"""
+        return [
+            {
+                "timestamp": trade["timestamp"] if isinstance(trade["timestamp"], str) 
+                            else trade["timestamp"].strftime("%Y-%m-%d %H:%M:%S"),
+                "type": trade["type"].upper(),
+                "price": trade["price"],
+                "quantity": trade["quantity"],
+                "cost": trade["cost"],
+                "commission": trade["commission"],
+                "pnl": trade["pnl"]
+            }
+            for trade in self.trades.to_dict('records')
+        ]
+
+    def _prepare_highcharts_data(self, series: pd.Series) -> List[List]:
+        """Convert pandas Series to Highcharts-compatible format"""
+        return [
+            [int(timestamp.timestamp() * 1000), float(value)]
+            for timestamp, value in series.items()
+        ]
+
+    def _calculate_drawdown(self) -> pd.Series:
+        """Calculate drawdown series"""
+        return (self.equity_curve / self.equity_curve.expanding().max() - 1) * 100
+
     def generate_report(self, output_dir: str = "reports") -> str:
-        """Generate a formatted HTML report"""
-        import jinja2
-        import os
-        
-        # Create reports directory if it doesn't exist
+        """Generate an enhanced HTML report with interactive charts and tables"""
         os.makedirs(output_dir, exist_ok=True)
         
-        # Generate plots
-        self._generate_plots(output_dir)
+        # Prepare all data for the template
+        template_data = {
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "grouped_metrics": self._group_metrics(),
+            "equity_curve_data": self._prepare_highcharts_data(self.equity_curve),
+            "drawdown_data": self._prepare_highcharts_data(self._calculate_drawdown()),
+            "monthly_returns_data": self._prepare_highcharts_data(self.monthly_returns * 100),
+            "trades_data": self._prepare_trades_data()
+        }
         
-        # Load template
-        template_loader = jinja2.FileSystemLoader(searchpath="src/templates")
-        template_env = jinja2.Environment(loader=template_loader)
-        template = template_env.get_template("backtest_report.html")
+        # Generate and save report
+        template = self._get_template()
+        report_html = template.render(**template_data)
+        report_path = os.path.join(output_dir, 
+                                 f"backtest_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html")
         
-        # Render report
-        report_html = template.render(
-            timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            metrics=self._get_metrics_dict(),
-            monthly_returns=self.monthly_returns.round(4) * 100
-        )
-        
-        # Save report
-        report_path = os.path.join(output_dir, f"backtest_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html")
         with open(report_path, 'w') as f:
             f.write(report_html)
             
@@ -150,4 +198,13 @@ class BacktestReport:
         plt.xlabel('Month')
         plt.ylabel('Year')
         plt.savefig(os.path.join(output_dir, 'monthly_returns.png'))
-        plt.close() 
+        plt.close()
+    
+    def _get_template(self):
+        """Get Jinja2 template for report generation"""
+        import jinja2
+        
+        template_loader = jinja2.FileSystemLoader(searchpath="src/templates")
+        template_env = jinja2.Environment(loader=template_loader)
+        return template_env.get_template("backtest_report.html")
+  
