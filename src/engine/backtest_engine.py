@@ -213,7 +213,7 @@ class BacktestEngine:
             elif signals[i] == -1 and current_position > 0:  # Sell signal
                 price = data['close'].iloc[i]
                 timestamp = data['time_key'].iloc[i]
-                proceeds = price * (1 - self.commission)
+                proceeds = price * (1 + self.commission)
                 trade_pnl = proceeds - last_buy_price * (1 + self.commission)
                 realized_pnl += trade_pnl
                 
