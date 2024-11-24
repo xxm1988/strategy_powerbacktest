@@ -1,46 +1,39 @@
 from datetime import datetime
-from src.data.data_fetcher import FutuDataFetcher
-from src.strategy.macd_strategy import MACDStrategy
-from src.engine.backtest_engine import BacktestEngine
+from src.engine.backtest_runner import BacktestRunner, BacktestConfig
+from src.strategy.strategy_factory import StrategyFactory
 from src.utils.config import Config
+from src.utils.cli_parser import create_cli_parser, get_backtest_config
 from src.utils.logger import setup_logger
 
 logger = setup_logger(__name__)
 
 def main():
+    # Parse command line arguments
+    parser = create_cli_parser()
+    args = parser.parse_args()
+    
     # Load configuration
     config = Config('config.yaml')
     
-    # Initialize data fetcher
-    fetcher = FutuDataFetcher(
+    # Display available strategies
+    available_strategies = StrategyFactory.get_available_strategies()
+    logger.info("Available strategies:")
+    for name, info in available_strategies.items():
+        logger.info(f"- {info['name']}: {info['description']}")
+    
+    # Get merged configuration
+    backtest_params = get_backtest_config(args, config)
+    
+    # Initialize backtest runner
+    runner = BacktestRunner(
         host=config.futu_config['host'],
         port=config.futu_config['port']
     )
     
-    # Fetch historical data
-    data = fetcher.fetch_historical_data(
-        symbol='HK.00700',
-        start=datetime(2023, 1, 1),
-        end=datetime(2023, 12, 31)
-    )
-    
-    # Initialize MACD strategy
-    strategy = MACDStrategy({
-        'fast_period': config.strategy['macd']['fast_period'],
-        'slow_period': config.strategy['macd']['slow_period'],
-        'signal_period': config.strategy['macd']['signal_period']
-    })
-    
-    # Run backtest
-    engine = BacktestEngine(
-        strategy=strategy,
-        initial_capital=config.backtest_config['initial_capital'],
-        commission=config.backtest_config['commission']
-    )
-    
-    results = engine.run(data)
-    report_path = results.generate_report()
+    # Create and run backtest
+    backtest_config = BacktestConfig(**backtest_params)
+    report_path = runner.run(backtest_config)
     logger.info(f"Backtest report generated at: {report_path}")
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

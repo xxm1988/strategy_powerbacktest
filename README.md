@@ -55,7 +55,7 @@ pip install -r requirements.txt
 
 3. **Run a Sample Backtest**
 ```bash
-python main.py
+python main.py --strategy macd --symbol HK.00700 --start-date 2023-01-01 --end-date 2023-12-31 --initial-capital 100000 --commission 0.001
 ```
 ## 📊 Example Strategy
 
