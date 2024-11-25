@@ -171,6 +171,18 @@
             border-bottom: 2px solid #e9ecef;
             padding-bottom: 0.75rem;
         }
+
+        .trade-buy {
+            color: #00c853;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .trade-sell {
+            color: #ff1744;
+            font-size: 24px;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -288,9 +300,15 @@
             </div>
         </div>
 
+
+
         <!-- Trades Analysis -->
         <div class="section mb-5">
             <h2 class="h4 mb-4">Trade Analysis</h2>
+            <!-- Price Chart with Trade Points -->
+            <div class="chart-container">
+                <div id="priceChart" style="height: 400px;"></div>
+            </div>
             <div class="trades-table">
                 <table id="tradesTable" class="table table-hover">
                     <thead>
@@ -435,6 +453,85 @@
             tooltip: {
                 valueSuffix: '%',
                 valueDecimals: 2
+            }
+        });
+
+        // Price Chart with Trade Points
+        Highcharts.stockChart('priceChart', {
+            chart: { 
+                type: 'line',
+                style: { fontFamily: 'Inter, sans-serif' }
+            },
+            title: { text: 'Price Chart with Trade Points' },
+            yAxis: { 
+                title: { text: 'Price ($)' },
+                labels: { formatter: function() { return '$' + this.value.toLocaleString(); } }
+            },
+            series: [{
+                name: 'Price',
+                data: {{ price_data|tojson }},
+                color: '#2c3e50',
+                lineWidth: 2,
+                id: 'price'
+            }, {
+                type: 'scatter',
+                name: 'Trade Points',
+                data: {{ trade_annotations|tojson|safe }}.map(function(point) {
+                    return {
+                        x: point.x,
+                        y: point.y,
+                        marker: {
+                            symbol: point.title === '↑' ? 'triangle' : 'triangle-down',
+                            fillColor: point.title === '↑' ? '#00c853' : '#ff1744',
+                            lineColor: point.title === '↑' ? '#00c853' : '#ff1744',
+                            lineWidth: 1,
+                            radius: 8
+                        },
+                        tooltip: {
+                            pointFormat: point.text
+                        }
+                    };
+                }),
+                tooltip: {
+                    pointFormat: '{point.tooltip}'
+                }
+            }],
+            tooltip: {
+                shared: true,
+                split: false,
+                valuePrefix: '$',
+                valueDecimals: 2
+            },
+            rangeSelector: {
+                enabled: true,
+                buttons: [{
+                    type: 'day',
+                    count: 7,
+                    text: '1w'
+                }, {
+                    type: 'month',
+                    count: 1,
+                    text: '1m'
+                }, {
+                    type: 'month',
+                    count: 3,
+                    text: '3m'
+                }, {
+                    type: 'month',
+                    count: 6,
+                    text: '6m'
+                }, {
+                    type: 'year',
+                    count: 1,
+                    text: '1y'
+                }, {
+                    type: 'all',
+                    text: 'All'
+                }],
+                selected: 4
+            },
+            navigator: {
+                enabled: true
             }
         });
     </script>

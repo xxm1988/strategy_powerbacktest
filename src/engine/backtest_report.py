@@ -360,6 +360,27 @@ class BacktestReport:
         equity_curve_data = [[int(t.timestamp() * 1000), v] for t, v in 
                             zip(self.portfolio.index, self.portfolio['total'])]
         
+        # Prepare price chart data
+        price_data = [[int(t.timestamp() * 1000), float(p)] for t, p in 
+                      zip(self.portfolio.index, self.portfolio['close'])]
+        
+        # Prepare trade annotations
+        trade_annotations = []
+        for trade in self.trades:
+            timestamp = pd.Timestamp(trade['timestamp']).timestamp() * 1000
+            price = float(trade['price'])
+            trade_type = trade['type'].upper()
+            
+            annotation = {
+                'x': int(timestamp),
+                'y': price,
+                'title': '↑' if trade_type == 'BUY' else '↓',
+                'text': f"{trade_type} @ ${price:,.2f}\nQty: {trade['quantity']}",
+                'className': f"trade-{trade_type.lower()}"
+            }
+            trade_annotations.append(annotation)
+        
+        # Prepare drawdown series for plotting
         drawdown_data = [[int(t.timestamp() * 1000), d * 100] for t, d in 
                          zip(self.portfolio.index, self._calculate_drawdowns())]
         
@@ -384,6 +405,8 @@ class BacktestReport:
             timestamp=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             grouped_metrics=grouped_metrics,
             equity_curve_data=equity_curve_data,
+            price_data=price_data,
+            trade_annotations=trade_annotations,
             drawdown_data=drawdown_data,
             monthly_returns_data=monthly_returns_data,
             trades_data=trades_data,
