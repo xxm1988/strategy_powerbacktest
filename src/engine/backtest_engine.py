@@ -68,7 +68,7 @@ class BacktestEngine:
         
         signals = self.strategy.generate_signals(data)
         self.portfolio = self._calculate_portfolio(data, signals)
-        trades = self._generate_trades_list(data, signals)
+        self.trades = self._generate_trades_list(data, signals)
         
         metrics = self._calculate_metrics()
         metrics['fundamental_data'] = fundamental_data  # Add fundamental data to metrics
@@ -77,7 +77,7 @@ class BacktestEngine:
         
         return BacktestReport.from_backtest_results(
             portfolio=self.portfolio,
-            trades=trades,
+            trades=self.trades,
             initial_capital=self.initial_capital,
             metrics=metrics
         )
@@ -218,10 +218,13 @@ class BacktestEngine:
         max_drawdown = drawdowns.min()
         
         # Trading statistics
-        winning_trades = len([t for t in self.trades if t.get('pnl', 0) > 0])
-        total_trades = len(self.trades)
-        win_rate = winning_trades / total_trades if total_trades > 0 else 0
-        
+        winning_trades = sum(1 for trade in self.trades 
+                            if trade.get('type').lower() == 'sell' 
+                            and trade.get('pnl', 0) > 0)
+        total_trades = sum(1 for trade in self.trades 
+                                if trade.get('type').lower() == 'sell')
+        win_rate = (winning_trades / total_trades) if total_trades > 0 else 0.0
+
         # PnL calculations
         current_position = self.portfolio['position'].iloc[-1]
         realized_pnl = sum(t.get('pnl', 0) for t in self.trades if 'pnl' in t)
