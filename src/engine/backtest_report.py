@@ -1,210 +1,449 @@
 from dataclasses import dataclass
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 import pandas as pd
 import numpy as np
 from datetime import datetime
 import matplotlib.pyplot as plt
 import seaborn as sns
 import os
+from jinja2 import Template
 
 @dataclass
 class BacktestReport:
-    """Enhanced backtest report with comprehensive analytics"""
+    """
+    Comprehensive backtest report with analytics and visualization capabilities.
+    
+    This class handles the generation of performance metrics, charts, and HTML reports
+    for trading strategy backtests.
+    
+    Attributes:
+        Basic Info:
+            strategy_name (str): Name of the trading strategy
+            symbol (str): Trading instrument symbol
+            start_date (datetime): Backtest start date
+            end_date (datetime): Backtest end date
+            lot_size (int): Trading lot size
+            commission_rate (float): Trading commission rate
+            
+        Performance Metrics:
+            initial_capital (float): Starting capital
+            final_portfolio_value (float): Ending portfolio value
+            total_return (float): Total return percentage
+            annual_return (float): Annualized return percentage
+            
+        Risk Metrics:
+            sharpe_ratio (float): Risk-adjusted return metric
+            sortino_ratio (float): Downside risk-adjusted return metric
+            max_drawdown (float): Maximum peak to trough decline
+            max_drawdown_duration (int): Longest drawdown period in days
+            volatility (float): Standard deviation of returns
+            value_at_risk (float): 95% Value at Risk
+            beta (float): Market correlation coefficient
+            
+        Trading Statistics:
+            total_trades (int): Total number of trades
+            winning_trades (int): Number of profitable trades
+            losing_trades (int): Number of unprofitable trades
+            win_rate (float): Percentage of winning trades
+            profit_factor (float): Ratio of gross profits to gross losses
+            
+        Time Series Data:
+            portfolio (pd.DataFrame): Portfolio value and returns history
+            trades (List[Dict[str, Any]]): Detailed trade history
+            monthly_returns (pd.DataFrame): Monthly return statistics
+    """
+    # Basic Info
+    strategy_name: str
+    symbol: str
+    start_date: datetime
+    end_date: datetime
+    lot_size: int
+    commission_rate: float
+    
+    # Capital and Returns
     initial_capital: float
     final_portfolio_value: float
     total_return: float
     annual_return: float
+    
+    # Risk Metrics
     sharpe_ratio: float
+    sortino_ratio: float
     max_drawdown: float
+    max_drawdown_duration: int
+    volatility: float
+    value_at_risk: float
+    beta: float
+    
+    # Trading Statistics
+    total_trades: int
+    winning_trades: int
+    losing_trades: int
     win_rate: float
     profit_factor: float
-    trades: pd.DataFrame
-    equity_curve: pd.Series
-    monthly_returns: pd.Series
-    realized_pnl: float
-    floating_pnl: float
-    total_pnl: float
-    total_trades: int
-    open_positions: int
+    avg_trade_return: float
+    avg_win: float
+    avg_loss: float
+    largest_win: float
+    largest_loss: float
+    max_consecutive_wins: int
+    max_consecutive_losses: int
     
+    # Position Info
+    avg_position_size: float
+    max_position_size: float
+    avg_position_duration: float
+    
+    # Time Series Data
+    portfolio: pd.DataFrame
+    trades: List[Dict[str, Any]]
+    monthly_returns: pd.DataFrame
+
     @classmethod
-    def from_backtest_results(cls, portfolio: pd.DataFrame, trades: List[Dict], initial_capital: float, metrics: Dict[str, Any]):
-        """Create a backtest report from raw backtest results"""
-        equity_curve = portfolio['total']
-        returns = portfolio['returns']
-        
-        # Ensure we have a datetime index
-        if not isinstance(returns.index, pd.DatetimeIndex):
-            raise ValueError("Portfolio returns must have a DatetimeIndex")
-        
-        # Monthly returns using 'ME' (month end) frequency
-        monthly_returns = returns.resample('ME').apply(lambda x: (1 + x).prod() - 1)
-        
-        # Create trades DataFrame
-        trades_df = pd.DataFrame(trades)
+    def from_backtest_results(
+        cls,
+        portfolio: pd.DataFrame,
+        trades: List[Dict[str, Any]],
+        initial_capital: float,
+        metrics: Dict[str, Any]
+    ) -> 'BacktestReport':
+        """Create report from backtest results"""
+        monthly_returns = cls._calculate_monthly_returns(portfolio)
         
         return cls(
+            strategy_name=metrics['strategy_name'],
+            symbol=metrics['symbol'],
+            start_date=portfolio.index[0],
+            end_date=portfolio.index[-1],
+            lot_size=metrics['lot_size'],
+            commission_rate=metrics['commission_rate'],
+            
             initial_capital=initial_capital,
             final_portfolio_value=portfolio['total'].iloc[-1],
-            total_return=metrics['total_return'] * 100,  # Convert to percentage
-            annual_return=metrics['annual_return'] * 100,  # Convert to percentage
-            sharpe_ratio=metrics['sharpe_ratio'],
-            max_drawdown=metrics['max_drawdown'] * 100,  # Convert to percentage
-            win_rate=metrics['win_rate'] * 100,  # Convert to percentage
-            profit_factor=metrics['total_pnl'] / abs(metrics['realized_pnl']) if metrics['realized_pnl'] < 0 else float('inf'),
-            trades=trades_df,
-            equity_curve=equity_curve,
-            monthly_returns=monthly_returns,
-            realized_pnl=metrics['realized_pnl'],
-            floating_pnl=metrics['floating_pnl'],
-            total_pnl=metrics['total_pnl'],
-            total_trades=metrics['total_trades'],
-            open_positions=metrics['open_positions']
-        )
-    
-    def _group_metrics(self) -> Dict[str, List[Dict]]:
-        """Group metrics into logical categories"""
-        return {
-            "Portfolio Statistics": [
-                {"title": "Initial Capital", "value": f"${self.initial_capital:,.2f}"},
-                {"title": "Final Value", "value": f"${self.final_portfolio_value:,.2f}"},
-                {"title": "Total Return", "value": f"{self.total_return:.2f}%", 
-                 "color": "positive" if self.total_return > 0 else "negative"},
-                {"title": "Annual Return", "value": f"{self.annual_return:.2f}%"}
-            ],
-            "Risk Metrics": [
-                {"title": "Sharpe Ratio", "value": f"{self.sharpe_ratio:.2f}"},
-                {"title": "Maximum Drawdown", "value": f"{self.max_drawdown:.2f}%"},
-                {"title": "Win Rate", "value": f"{self.win_rate:.2f}%"},
-                {"title": "Profit Factor", "value": f"{self.profit_factor:.2f}"}
-            ],
-            "Trading Statistics": [
-                {"title": "Total Trades", "value": str(self.total_trades)},
-                {"title": "Realized P&L", "value": f"${self.realized_pnl:,.2f}",
-                 "color": "positive" if self.realized_pnl > 0 else "negative"},
-                {"title": "Floating P&L", "value": f"${self.floating_pnl:,.2f}",
-                 "color": "positive" if self.floating_pnl > 0 else "negative"},
-                {"title": "Open Positions", "value": str(self.open_positions)}
-            ]
-        }
-
-    def _prepare_trades_data(self) -> List[Dict]:
-        """Prepare trades data for DataTables"""
-        return [
-            {
-                "timestamp": trade["timestamp"] if isinstance(trade["timestamp"], str) 
-                            else trade["timestamp"].strftime("%Y-%m-%d %H:%M:%S"),
-                "type": trade["type"].upper(),
-                "price": trade["price"],
-                "quantity": trade["quantity"],
-                "cost": trade["cost"],
-                "commission": trade["commission"],
-                "pnl": trade["pnl"]
-            }
-            for trade in self.trades.to_dict('records')
-        ]
-
-    def _prepare_highcharts_data(self, series: pd.Series) -> List[List]:
-        """Convert pandas Series to Highcharts-compatible format"""
-        return [
-            [int(timestamp.timestamp() * 1000), float(value)]
-            for timestamp, value in series.items()
-        ]
-
-    def _calculate_drawdown(self) -> pd.Series:
-        """Calculate drawdown series"""
-        return (self.equity_curve / self.equity_curve.expanding().max() - 1) * 100
-
-    def generate_report(self, output_dir: str = "reports") -> str:
-        """Generate an enhanced HTML report with interactive charts and tables"""
-        os.makedirs(output_dir, exist_ok=True)
-        
-        # Prepare all data for the template
-        template_data = {
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "grouped_metrics": self._group_metrics(),
-            "equity_curve_data": self._prepare_highcharts_data(self.equity_curve),
-            "drawdown_data": self._prepare_highcharts_data(self._calculate_drawdown()),
-            "monthly_returns_data": self._prepare_highcharts_data(self.monthly_returns * 100),
-            "trades_data": self._prepare_trades_data()
-        }
-        
-        # Generate and save report
-        template = self._get_template()
-        report_html = template.render(**template_data)
-        report_path = os.path.join(output_dir, 
-                                 f"backtest_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html")
-        
-        with open(report_path, 'w') as f:
-            f.write(report_html)
+            total_return=metrics['total_return'],
+            annual_return=metrics['annual_return'],
             
-        return report_path
-    
-    def _get_metrics_dict(self) -> Dict[str, Any]:
-        """Get formatted metrics dictionary"""
-        return {
-            "Initial Capital": f"${self.initial_capital:,.2f}",
-            "Final Portfolio Value": f"${self.final_portfolio_value:,.2f}",
-            "Total Return": f"{self.total_return:.2f}%",
-            "Annual Return": f"{self.annual_return:.2f}%",
-            "Sharpe Ratio": f"{self.sharpe_ratio:.2f}",
-            "Maximum Drawdown": f"{self.max_drawdown:.2f}%",
-            "Win Rate": f"{self.win_rate:.2f}%",
-            "Profit Factor": f"{self.profit_factor:.2f}",
-            "Number of Trades": f"{self.total_trades}",
-            "Realized PnL": f"${self.realized_pnl:,.2f}",
-            "Floating PnL": f"${self.floating_pnl:,.2f}",
-            "Total PnL": f"${self.total_pnl:,.2f}",
-            "Open Positions": f"{self.open_positions}"
-        }
-    
-    def _generate_plots(self, output_dir: str):
-        """Generate and save analysis plots"""
-        # Equity curve
+            sharpe_ratio=metrics['sharpe_ratio'],
+            sortino_ratio=cls._calculate_sortino_ratio(portfolio),
+            max_drawdown=metrics['max_drawdown'],
+            max_drawdown_duration=cls._calculate_drawdown_duration(portfolio),
+            volatility=portfolio['returns'].std() * np.sqrt(252),
+            value_at_risk=cls._calculate_var(portfolio),
+            beta=cls._calculate_beta(portfolio),
+            
+            total_trades=len(trades),
+            winning_trades=len([t for t in trades if t.get('pnl', 0) > 0]),
+            losing_trades=len([t for t in trades if t.get('pnl', 0) < 0]),
+            win_rate=metrics['win_rate'],
+            profit_factor=cls._calculate_profit_factor(trades),
+            avg_trade_return=np.mean([t.get('pnl', 0) for t in trades]),
+            avg_win=np.mean([t['pnl'] for t in trades if t.get('pnl', 0) > 0]),
+            avg_loss=np.mean([t['pnl'] for t in trades if t.get('pnl', 0) < 0]),
+            largest_win=max([t.get('pnl', 0) for t in trades]),
+            largest_loss=min([t.get('pnl', 0) for t in trades]),
+            max_consecutive_wins=cls._calculate_consecutive_stats(trades, 'wins'),
+            max_consecutive_losses=cls._calculate_consecutive_stats(trades, 'losses'),
+            
+            avg_position_size=portfolio['position'].mean(),
+            max_position_size=portfolio['position'].max(),
+            avg_position_duration=cls._calculate_avg_position_duration(trades),
+            
+            portfolio=portfolio,
+            trades=trades,
+            monthly_returns=monthly_returns
+        )
+
+    def generate_report(self, output_dir: str) -> None:
+        """
+        Generate comprehensive HTML report with visualizations.
+        
+        Args:
+            output_dir (str): Directory path for saving report files
+            
+        Raises:
+            OSError: If unable to create output directory or save files
+            ValueError: If required data is missing or invalid
+        """
+        try:
+            os.makedirs(output_dir, exist_ok=True)
+            
+            # Generate all charts
+            self._generate_equity_curve(output_dir)
+            self._generate_drawdown_chart(output_dir)
+            self._generate_monthly_returns_heatmap(output_dir)
+            self._generate_trade_distribution(output_dir)
+            
+            # Generate HTML report
+            self._generate_html_report(output_dir)
+            
+        except Exception as e:
+            raise RuntimeError(f"Failed to generate backtest report: {str(e)}")
+  
+    @staticmethod
+    def _calculate_monthly_returns(portfolio: pd.DataFrame) -> pd.DataFrame:
+        """Calculate monthly returns from portfolio data"""
+        # Keep original monthly returns calculation for the chart
+        monthly_returns = portfolio['returns'].resample('ME').apply(
+            lambda x: (1 + x).prod() - 1
+        )
+        
+        # Create DataFrame with returns column
+        return pd.DataFrame({'returns': monthly_returns})
+
+    @staticmethod
+    def _calculate_sortino_ratio(portfolio: pd.DataFrame, risk_free_rate: float = 0.02) -> float:
+        """Calculate Sortino ratio using negative returns only"""
+        returns = portfolio['returns']
+        negative_returns = returns[returns < 0]
+        if len(negative_returns) == 0:
+            return np.inf
+        
+        excess_returns = returns.mean() * 252 - risk_free_rate
+        downside_std = np.sqrt(252) * np.sqrt(np.mean(negative_returns**2))
+        return excess_returns / downside_std if downside_std != 0 else 0
+
+    @staticmethod
+    def _calculate_drawdown_duration(portfolio: pd.DataFrame) -> int:
+        """Calculate maximum drawdown duration in days"""
+        # Ensure we're working with the portfolio's index
+        cumulative_returns = (1 + portfolio['returns']).cumprod()
+        rolling_max = cumulative_returns.expanding().max()
+        drawdowns = cumulative_returns / rolling_max - 1
+        
+        # Create drawdown periods with proper index alignment
+        is_drawdown = drawdowns < 0
+        drawdown_periods = pd.Series(range(len(drawdowns)), index=drawdowns.index)
+        drawdown_periods.loc[~is_drawdown] = np.nan
+        drawdown_periods = drawdown_periods.ffill()  # Using ffill() instead of fillna(method='ffill')
+        
+        # Calculate durations
+        if drawdown_periods.empty:
+            return 0
+        
+        # Group consecutive periods and find the longest one
+        drawdown_groups = (drawdown_periods.diff() != 0).cumsum()
+        durations = drawdown_groups.value_counts()
+        return int(durations.max()) if not durations.empty else 0
+
+    @staticmethod
+    def _calculate_var(portfolio: pd.DataFrame, confidence: float = 0.95) -> float:
+        """Calculate Value at Risk"""
+        returns = portfolio['returns']
+        return np.percentile(returns, (1 - confidence) * 100)
+
+    @staticmethod
+    def _calculate_beta(portfolio: pd.DataFrame, market_returns: pd.Series = None) -> float:
+        """Calculate portfolio beta against market returns"""
+        if market_returns is None:
+            return 1.0  # Default to 1.0 if no market data available
+        
+        returns = portfolio['returns']
+        covariance = returns.cov(market_returns)
+        market_variance = market_returns.var()
+        return covariance / market_variance if market_variance != 0 else 1.0
+
+    @staticmethod
+    def _calculate_profit_factor(trades: List[Dict[str, Any]]) -> float:
+        """Calculate profit factor (gross profits / gross losses)"""
+        profits = sum(t['pnl'] for t in trades if t.get('pnl', 0) > 0)
+        losses = abs(sum(t['pnl'] for t in trades if t.get('pnl', 0) < 0))
+        return profits / losses if losses != 0 else float('inf')
+
+    @staticmethod
+    def _calculate_consecutive_stats(trades: List[Dict[str, Any]], stat_type: str) -> int:
+        """Calculate maximum consecutive wins or losses"""
+        if not trades:
+            return 0
+            
+        current_streak = max_streak = 0
+        for trade in trades:
+            pnl = trade.get('pnl', 0)
+            if (stat_type == 'wins' and pnl > 0) or (stat_type == 'losses' and pnl < 0):
+                current_streak += 1
+                max_streak = max(max_streak, current_streak)
+            else:
+                current_streak = 0
+        return max_streak
+
+    @staticmethod
+    def _calculate_avg_position_duration(trades: List[Dict[str, Any]]) -> float:
+        """Calculate average position duration in days"""
+        if not trades:
+            return 0
+            
+        durations = []
+        for i in range(0, len(trades) - 1, 2):
+            if i + 1 < len(trades):
+                entry = pd.Timestamp(trades[i]['timestamp'])
+                exit = pd.Timestamp(trades[i + 1]['timestamp'])
+                duration = (exit - entry).total_seconds() / (24 * 3600)  # Convert to days
+                durations.append(duration)
+        return np.mean(durations) if durations else 0
+
+    def _generate_equity_curve(self, output_dir: str) -> None:
+        """Generate equity curve plot"""
         plt.figure(figsize=(12, 6))
-        self.equity_curve.plot()
-        plt.title('Portfolio Equity Curve')
+        plt.plot(self.portfolio.index, self.portfolio['total'], label='Portfolio Value')
+        plt.title('Equity Curve')
+        plt.xlabel('Date')
+        plt.ylabel('Portfolio Value ($)')
         plt.grid(True)
+        plt.legend()
         plt.savefig(os.path.join(output_dir, 'equity_curve.png'))
         plt.close()
+
+    def _generate_drawdown_chart(self, output_dir: str) -> None:
+        """Generate drawdown chart"""
+        cumulative_returns = (1 + self.portfolio['returns']).cumprod()
+        rolling_max = cumulative_returns.expanding().max()
+        drawdowns = cumulative_returns / rolling_max - 1
         
-        # Monthly returns heatmap
-        monthly_returns_table = self.monthly_returns.round(4) * 100
-        # Convert to a proper month/year format for the heatmap
-        monthly_returns_df = pd.DataFrame({
-            'Year': monthly_returns_table.index.year,
-            'Month': monthly_returns_table.index.month,
-            'Returns': monthly_returns_table.values
-        })
-        
-        # Create pivot table for heatmap
-        pivot_table = monthly_returns_df.pivot(
-            index='Year',
-            columns='Month',
-            values='Returns'
-        )
-        
-        # Plot heatmap
         plt.figure(figsize=(12, 6))
+        plt.plot(self.portfolio.index, drawdowns * 100)
+        plt.title('Drawdown Chart')
+        plt.xlabel('Date')
+        plt.ylabel('Drawdown (%)')
+        plt.grid(True)
+        plt.savefig(os.path.join(output_dir, 'drawdown.png'))
+        plt.close()
+
+    def _generate_monthly_returns_heatmap(self, output_dir: str) -> None:
+        """Generate monthly returns heatmap"""
+        plt.figure(figsize=(12, 8))
+        
+        # Create heatmap
         sns.heatmap(
-            pivot_table,
+            self.monthly_returns,
             annot=True,
-            fmt='.1f',
+            fmt='.2%',
             cmap='RdYlGn',
             center=0,
-            cbar_kws={'label': 'Monthly Returns (%)'}
+            cbar_kws={'label': 'Monthly Return'}
         )
-        plt.title('Monthly Returns (%)')
+        
+        # Customize appearance
+        plt.title('Monthly Returns Heatmap')
         plt.xlabel('Month')
         plt.ylabel('Year')
+        
+        # Use month names for x-axis
+        month_labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        plt.xticks(np.arange(12) + 0.5, month_labels, rotation=0)
+        
+        plt.tight_layout()
         plt.savefig(os.path.join(output_dir, 'monthly_returns.png'))
         plt.close()
-    
-    def _get_template(self):
-        """Get Jinja2 template for report generation"""
-        import jinja2
+
+    def _generate_trade_distribution(self, output_dir: str) -> None:
+        """Generate trade P&L distribution plot"""
+        pnls = [trade.get('pnl', 0) for trade in self.trades]
+        plt.figure(figsize=(10, 6))
+        plt.hist(pnls, bins=50, edgecolor='black')
+        plt.title('Trade P&L Distribution')
+        plt.xlabel('P&L ($)')
+        plt.ylabel('Frequency')
+        plt.savefig(os.path.join(output_dir, 'trade_distribution.png'))
+        plt.close()
+
+    def _generate_html_report(self, output_dir: str) -> None:
+        """Generate HTML report with all metrics and charts"""
+        template_path = os.path.join(os.path.dirname(__file__), '../templates/backtest_report.html')
+        with open(template_path, 'r') as f:
+            template = Template(f.read())
         
-        template_loader = jinja2.FileSystemLoader(searchpath="src/templates")
-        template_env = jinja2.Environment(loader=template_loader)
-        return template_env.get_template("backtest_report.html")
+        # Reference to grouped_metrics preparation
+        grouped_metrics = self._get_metrics_dict()
+        
+        # Prepare chart data
+        equity_curve_data = [[int(t.timestamp() * 1000), v] for t, v in 
+                            zip(self.portfolio.index, self.portfolio['total'])]
+        
+        drawdown_data = [[int(t.timestamp() * 1000), d * 100] for t, d in 
+                         zip(self.portfolio.index, self._calculate_drawdowns())]
+        
+        # Format monthly returns data for Highcharts
+        monthly_returns_data = [[int(t.timestamp() * 1000), float(r * 100)] 
+                               for t, r in self.monthly_returns['returns'].items()]
+        
+        # Prepare trades data
+        trades_data = [{
+            'timestamp': pd.Timestamp(trade['timestamp']).strftime('%Y-%m-%d %H:%M') if isinstance(trade['timestamp'], str) 
+                    else trade['timestamp'].strftime('%Y-%m-%d %H:%M'),
+            'type': trade['type'].upper(),
+            'price': float(trade['price']),
+            'quantity': int(trade['quantity']),
+            'cost': float(abs(trade.get('cost', 0))),
+            'commission': float(trade.get('commission', 0)),
+            'pnl': float(trade.get('pnl', 0))
+        } for trade in self.trades]
+        
+        # Render template with all required variables
+        html_content = template.render(
+            timestamp=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            grouped_metrics=grouped_metrics,
+            equity_curve_data=equity_curve_data,
+            drawdown_data=drawdown_data,
+            monthly_returns_data=monthly_returns_data,
+            trades_data=trades_data,
+            trades=trades_data  # Add this for backward compatibility
+        )
+        
+        # Save HTML report
+        output_path = os.path.join(output_dir, 'backtest_report.html')
+        with open(output_path, 'w') as f:
+            f.write(html_content)
+
+    def _calculate_drawdowns(self) -> pd.Series:
+        """Calculate drawdown series for plotting"""
+        cumulative_returns = (1 + self.portfolio['returns']).cumprod()
+        rolling_max = cumulative_returns.expanding().max()
+        drawdowns = cumulative_returns / rolling_max - 1
+        return drawdowns
+
+    def _get_metrics_dict(self) -> Dict[str, List[Dict[str, Any]]]:
+        """Organize metrics into groups for HTML report"""
+        return {
+            'Strategy Info': [
+                {'title': 'Strategy', 'value': self.strategy_name},
+                {'title': 'Symbol', 'value': self.symbol},
+                {'title': 'Period', 'value': f"{self.start_date.strftime('%Y-%m-%d')} to {self.end_date.strftime('%Y-%m-%d')}"},
+                {'title': 'Initial Capital', 'value': f"${self.initial_capital:,.2f}"},
+                {'title': 'Commission Rate', 'value': f"{self.commission_rate*100:.2f}%"}
+            ],
+            'Performance Metrics': [
+                {'title': 'Final Portfolio Value', 'value': f"${self.final_portfolio_value:,.2f}"},
+                {'title': 'Total Return', 'value': f"{self.total_return*100:.2f}%", 
+                 'color': 'positive' if self.total_return > 0 else 'negative'},
+                {'title': 'Annual Return', 'value': f"{self.annual_return*100:.2f}%",
+                 'color': 'positive' if self.annual_return > 0 else 'negative'},
+                {'title': 'Sharpe Ratio', 'value': f"{self.sharpe_ratio:.2f}"},
+                {'title': 'Sortino Ratio', 'value': f"{self.sortino_ratio:.2f}"}
+            ],
+            'Risk Metrics': [
+                {'title': 'Max Drawdown', 'value': f"{self.max_drawdown*100:.2f}%", 'color': 'negative'},
+                {'title': 'Max Drawdown Duration', 'value': f"{self.max_drawdown_duration} days"},
+                {'title': 'Volatility', 'value': f"{self.volatility*100:.2f}%"},
+                {'title': 'Value at Risk (95%)', 'value': f"{self.value_at_risk*100:.2f}%"},
+                {'title': 'Beta', 'value': f"{self.beta:.2f}"}
+            ],
+            'Trading Statistics': [
+                {'title': 'Total Trades', 'value': str(self.total_trades)},
+                {'title': 'Win Rate', 'value': f"{self.win_rate*100:.2f}%"},
+                {'title': 'Profit Factor', 'value': f"{self.profit_factor:.2f}"},
+                {'title': 'Average Trade Return', 'value': f"${self.avg_trade_return:,.2f}",
+                 'color': 'positive' if self.avg_trade_return > 0 else 'negative'},
+                {'title': 'Average Win', 'value': f"${self.avg_win:,.2f}", 'color': 'positive'},
+                {'title': 'Average Loss', 'value': f"${self.avg_loss:,.2f}", 'color': 'negative'},
+                {'title': 'Largest Win', 'value': f"${self.largest_win:,.2f}", 'color': 'positive'},
+                {'title': 'Largest Loss', 'value': f"${self.largest_loss:,.2f}", 'color': 'negative'},
+                {'title': 'Max Consecutive Wins', 'value': str(self.max_consecutive_wins)},
+                {'title': 'Max Consecutive Losses', 'value': str(self.max_consecutive_losses)}
+            ],
+            'Position Info': [
+                {'title': 'Average Position Size', 'value': f"{self.avg_position_size:,.0f} units"},
+                {'title': 'Max Position Size', 'value': f"{self.max_position_size:,.0f} units"},
+                {'title': 'Average Position Duration', 'value': f"{self.avg_position_duration:.1f} days"}
+            ]
+        }
   

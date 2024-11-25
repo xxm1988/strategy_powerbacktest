@@ -1,6 +1,9 @@
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional, Tuple
+from dataclasses import dataclass
 import pandas as pd
 import numpy as np
+from datetime import datetime
+from logging import Logger
 from src.strategy.base_strategy import BaseStrategy
 from src.data.data_fetcher import FutuDataFetcher
 from src.utils.logger import setup_logger
@@ -8,48 +11,55 @@ from .backtest_report import BacktestReport
 from .portfolio import Portfolio
 from futu import OpenQuoteContext
 
+@dataclass
+class TradeExecution:
+    """Data class for trade execution details"""
+    timestamp: datetime
+    type: str
+    price: float
+    quantity: int
+    commission: float
+    pnl: Optional[float] = None
+    cost: Optional[float] = None
+    proceeds: Optional[float] = None
+
 class BacktestEngine:
     """
-    BacktestEngine handles the execution of trading strategies in a simulated environment.
+    Backtesting engine for simulating trading strategies.
     
-    This class manages portfolio state, executes trades based on strategy signals,
-    and calculates performance metrics while respecting lot size constraints for HK stocks.
-    
-    Attributes:
-        strategy (BaseStrategy): Trading strategy to backtest
-        initial_capital (float): Starting capital for the backtest
-        commission (float): Commission rate for trades
-        lot_size (int): Trading lot size for the instrument
-        logger: Configured logging instance
+    This class provides a framework for testing trading strategies with historical data,
+    handling position sizing, trade execution, and performance tracking.
     """
     
     def __init__(
         self,
         strategy: BaseStrategy,
         initial_capital: float = 100000.0,
-        commission: float = 0.001
+        commission: float = 0.001,
+        logger: Optional[Logger] = None
     ):
+        """
+        Initialize backtesting engine.
+        
+        Args:
+            strategy: Trading strategy implementation
+            initial_capital: Starting capital for backtest
+            commission: Trading commission rate
+            logger: Optional custom logger instance
+        """
         self.strategy = strategy
         self.initial_capital = initial_capital
         self.commission = commission
         self.portfolio = pd.DataFrame()
-        self.positions = pd.DataFrame()
-        self.trades = []
-        self.logger = setup_logger(__name__)
-        self.lot_size = 1  # Will be updated in run()
+        self.trades: List[TradeExecution] = []
+        self.logger = logger or setup_logger(__name__)
+        self.lot_size = 1
+        self.symbol: Optional[str] = None
         
     def run(self, data: pd.DataFrame, symbol: str) -> BacktestReport:
-        """
-        Execute backtest for the given data and symbol.
-        
-        Args:
-            data (pd.DataFrame): Historical price data
-            symbol (str): Trading symbol (e.g., 'HK.00700')
-            
-        Returns:
-            BacktestReport: Comprehensive backtest results and metrics
-        """
+        """Execute backtest for the given data and symbol."""
         self.lot_size = self.fetch_lot_size(symbol)
+        self.symbol = symbol  # Add this line
         self._log_backtest_start(data, symbol)
         
         signals = self.strategy.generate_signals(data)
@@ -165,68 +175,80 @@ class BacktestEngine:
         return portfolio
         
     def _calculate_metrics(self) -> Dict[str, Any]:
-        """
-        Calculate comprehensive performance metrics including PnL and risk metrics
+        """Calculate comprehensive backtest metrics"""
+        # Basic portfolio metrics
+        final_value = self.portfolio['total'].iloc[-1]
+        total_return = (final_value - self.initial_capital) / self.initial_capital
         
-        Returns:
-            Dict containing performance metrics:
-            - total_return: Overall return percentage
-            - annual_return: Annualized return
-            - sharpe_ratio: Risk-adjusted return metric
-            - max_drawdown: Maximum peak to trough decline
-            - win_rate: Percentage of winning trades
-            - realized_pnl: Total realized profit/loss
-            - floating_pnl: Unrealized profit/loss from open positions
-            - total_pnl: Combined realized and floating PnL
-        """
-        # Calculate basic return metrics
-        returns = self.portfolio['returns'].dropna()
-        total_value = self.portfolio['total'].iloc[-1]
-        total_return = (total_value - self.initial_capital) / self.initial_capital
+        # Calculate annualized return
+        days = (self.portfolio.index[-1] - self.portfolio.index[0]).days
+        annual_return = (1 + total_return) ** (365 / days) - 1 if days > 0 else 0
         
-        # Calculate PnL metrics from trades
-        realized_pnl = sum(trade['pnl'] for trade in self.trades if trade['type'] == 'sell')
+        # Risk metrics
+        returns = self.portfolio['returns']
+        risk_free_rate = 0.02  # Assuming 2% risk-free rate
+        excess_returns = returns - risk_free_rate / 252
+        volatility = returns.std() * np.sqrt(252)
         
-        # Calculate floating PnL from current positions
+        # Sharpe ratio
+        sharpe_ratio = (excess_returns.mean() * 252) / volatility if volatility != 0 else 0
+        
+        # Maximum drawdown
+        cumulative_returns = (1 + returns).cumprod()
+        rolling_max = cumulative_returns.expanding().max()
+        drawdowns = cumulative_returns / rolling_max - 1
+        max_drawdown = drawdowns.min()
+        
+        # Trading statistics
+        winning_trades = len([t for t in self.trades if t.get('pnl', 0) > 0])
+        total_trades = len(self.trades)
+        win_rate = winning_trades / total_trades if total_trades > 0 else 0
+        
+        # PnL calculations
         current_position = self.portfolio['position'].iloc[-1]
+        realized_pnl = sum(t.get('pnl', 0) for t in self.trades if 'pnl' in t)
+        
+        # Calculate floating PnL if there's an open position
+        floating_pnl = 0
         if current_position > 0:
-            last_buy_trade = next(trade for trade in reversed(self.trades) 
-                                if trade['type'] == 'buy')
-            last_buy_price = last_buy_trade['price']
-            final_price = self.portfolio['close'].iloc[-1]
-            floating_pnl = (final_price - last_buy_price) * current_position
-        else:
-            floating_pnl = 0
+            last_buy_trade = next((t for t in reversed(self.trades) 
+                                 if t['type'] == 'buy'), None)
+            if last_buy_trade:
+                current_price = self.portfolio['close'].iloc[-1]
+                floating_pnl = (current_price - last_buy_trade['price']) * current_position
         
         total_pnl = realized_pnl + floating_pnl
         
-        # Calculate risk metrics
-        if len(returns) > 0:
-            annual_return = returns.mean() * 252
-            sharpe_ratio = np.sqrt(252) * returns.mean() / returns.std() if returns.std() > 0 else 0
-            max_drawdown = (self.portfolio['total'] / self.portfolio['total'].cummax() - 1).min()
+        return {
+            # Strategy Info
+            'strategy_name': self.strategy.__class__.__name__,
+            'symbol': self.symbol,
+            'lot_size': self.lot_size,
+            'commission_rate': self.commission,
             
-            # Calculate win rate from completed trades only
-            completed_trades = [t for t in self.trades if t['type'] == 'sell']
-            winning_trades = len([t for t in completed_trades if t['pnl'] > 0])
-            win_rate = winning_trades / len(completed_trades) if completed_trades else 0
-        else:
-            annual_return = sharpe_ratio = max_drawdown = win_rate = 0
-        
-        metrics = {
+            # Capital and Returns
             'total_return': total_return,
             'annual_return': annual_return,
+            
+            # Risk Metrics
             'sharpe_ratio': sharpe_ratio,
             'max_drawdown': max_drawdown,
+            'volatility': volatility,
+            
+            # Trading Statistics
             'win_rate': win_rate,
+            'total_trades': total_trades,
+            'winning_trades': winning_trades,
+            'losing_trades': total_trades - winning_trades,
+            
+            # PnL Information
             'realized_pnl': realized_pnl,
             'floating_pnl': floating_pnl,
             'total_pnl': total_pnl,
-            'total_trades': len(self.trades),
+            
+            # Position Information
             'open_positions': current_position
         }
-        
-        return metrics
         
     def _generate_trades_list(self, data: pd.DataFrame, signals: pd.Series) -> List[Dict]:
         """Generate list of trades from signals with lot size handling"""

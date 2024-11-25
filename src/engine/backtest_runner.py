@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Dict, Optional
 import pandas as pd
+import os
 
 from ..data.data_fetcher import FutuDataFetcher
 from ..strategy.strategy_factory import StrategyFactory
@@ -73,4 +74,12 @@ class BacktestRunner:
         )
         
         results = engine.run(data, config.symbol)
-        return results.generate_report() 
+        
+        # Create output directory if it doesn't exist
+        output_dir = os.path.join(os.getcwd(), 'reports')
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Generate report
+        results.generate_report(output_dir)
+        
+        return os.path.join(output_dir, 'backtest_report.html') 
