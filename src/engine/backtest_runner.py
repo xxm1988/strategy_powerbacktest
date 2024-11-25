@@ -72,5 +72,5 @@ class BacktestRunner:
             commission=config.commission
         )
         
-        results = engine.run(data)
+        results = engine.run(data, config.symbol)
         return results.generate_report() 

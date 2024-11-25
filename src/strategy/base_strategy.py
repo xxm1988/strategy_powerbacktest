@@ -8,6 +8,11 @@ class BaseStrategy(ABC):
         self.parameters = parameters or {}
         self.position = 0
         self.signals = []
+        self.lot_size = parameters.get('lot_size', 1)  # Default lot size
+        
+    def set_lot_size(self, lot_size: int):
+        """Set the lot size for the stock"""
+        self.lot_size = lot_size
         
     @abstractmethod
     def generate_signals(self, data: pd.DataFrame) -> pd.Series:
@@ -42,3 +47,8 @@ class BaseStrategy(ABC):
             Boolean indicating if parameters are valid
         """
         return True
+        
+    def calculate_position_size(self, capital: float, price: float) -> int:
+        """Calculate position size in lots based on available capital"""
+        max_shares = int(capital / price)
+        return (max_shares // self.lot_size) * self.lot_size

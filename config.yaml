@@ -46,6 +46,22 @@ strategy:
     slow_period: 26
     signal_period: 9
 
+  btse:
+    lookback_period: 25
+    breakthrough_threshold: 3
+    ma_period: 2
+    momentum_period: 3
+    support_period: 9
+
+  leg:
+    ma_period: 17
+    vol_period: 88
+    rsi_period: 9
+    pattern_lookback: 120
+    position_size: 1.0
+    max_positions: 1
+    risk_factor: 0.02
+
 # Logging Configuration
 logging:
   level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL

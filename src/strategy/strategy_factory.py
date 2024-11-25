@@ -1,7 +1,9 @@
 from typing import Dict, Type
 from .base_strategy import BaseStrategy
 from .macd_strategy import MACDStrategy
-from .moving_average_cross import MovingAverageCrossStrategy
+from .moving_average_strategy import MovingAverageCrossStrategy
+from .btse_strategy import BTSEStrategy
+from .leg_strategy import LEGStrategy
 
 class StrategyFactory:
     """
@@ -12,7 +14,9 @@ class StrategyFactory:
     """
     _strategies = {
         'macd': MACDStrategy,
-        'ma_cross': MovingAverageCrossStrategy
+        'ma_cross': MovingAverageCrossStrategy,
+        'btse': BTSEStrategy,
+        'leg': LEGStrategy
     }
     
     @classmethod
@@ -39,6 +43,25 @@ class StrategyFactory:
                 'parameters': {
                     'short_window': {'type': 'int', 'default': 20, 'min': 1, 'max': 100},
                     'long_window': {'type': 'int', 'default': 50, 'min': 10, 'max': 200}
+                }
+            },
+            'btse': {
+                'name': 'BTSE Strategy',
+                'description': 'Breakthrough Strength Evaluation strategy combining multiple technical indicators',
+                'parameters': {
+                    'lookback_period': {'type': 'int', 'default': 25, 'min': 10, 'max': 100},
+                    'breakthrough_threshold': {'type': 'int', 'default': 3, 'min': 1, 'max': 10},
+                    'ma_period': {'type': 'int', 'default': 2, 'min': 1, 'max': 10}
+                }
+            },
+            'leg': {
+                'name': 'LEG Strategy',
+                'description': 'Level Entry Guide strategy combining multiple technical indicators',
+                'parameters': {
+                    'ma_period': {'type': 'int', 'default': 17, 'min': 1, 'max': 100},
+                    'vol_period': {'type': 'int', 'default': 88, 'min': 1, 'max': 100},
+                    'rsi_period': {'type': 'int', 'default': 9, 'min': 1, 'max': 100},
+                    'pattern_lookback': {'type': 'int', 'default': 120, 'min': 1, 'max': 1000}
                 }
             }
         }

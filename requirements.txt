@@ -7,3 +7,4 @@ typing-extensions
 jinja2
 matplotlib
 seaborn
+TA-Lib
