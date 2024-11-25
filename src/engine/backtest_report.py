@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import os
 from jinja2 import Template
+from ..engine.fundamental_data import FundamentalData
 
 @dataclass
 class BacktestReport:
@@ -51,6 +52,8 @@ class BacktestReport:
             portfolio (pd.DataFrame): Portfolio value and returns history
             trades (List[Dict[str, Any]]): Detailed trade history
             monthly_returns (pd.DataFrame): Monthly return statistics
+        Fundamental Data:
+            fundamental_data (FundamentalData): Company fundamental data
     """
     # Basic Info
     strategy_name: str
@@ -98,6 +101,7 @@ class BacktestReport:
     portfolio: pd.DataFrame
     trades: List[Dict[str, Any]]
     monthly_returns: pd.DataFrame
+    fundamental_data: FundamentalData
 
     @classmethod
     def from_backtest_results(
@@ -107,9 +111,7 @@ class BacktestReport:
         initial_capital: float,
         metrics: Dict[str, Any]
     ) -> 'BacktestReport':
-        """Create report from backtest results"""
-        monthly_returns = cls._calculate_monthly_returns(portfolio)
-        
+        """Create a backtest report from raw backtest results"""
         return cls(
             strategy_name=metrics['strategy_name'],
             symbol=metrics['symbol'],
@@ -117,12 +119,10 @@ class BacktestReport:
             end_date=portfolio.index[-1],
             lot_size=metrics['lot_size'],
             commission_rate=metrics['commission_rate'],
-            
             initial_capital=initial_capital,
             final_portfolio_value=portfolio['total'].iloc[-1],
             total_return=metrics['total_return'],
             annual_return=metrics['annual_return'],
-            
             sharpe_ratio=metrics['sharpe_ratio'],
             sortino_ratio=cls._calculate_sortino_ratio(portfolio),
             max_drawdown=metrics['max_drawdown'],
@@ -150,7 +150,8 @@ class BacktestReport:
             
             portfolio=portfolio,
             trades=trades,
-            monthly_returns=monthly_returns
+            monthly_returns=metrics['monthly_returns'],
+            fundamental_data=metrics['fundamental_data']
         )
 
     def generate_report(self, output_dir: str) -> None:
@@ -378,7 +379,7 @@ class BacktestReport:
             'pnl': float(trade.get('pnl', 0))
         } for trade in self.trades]
         
-        # Render template with all required variables
+        # Generate HTML content with all required data
         html_content = template.render(
             timestamp=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             grouped_metrics=grouped_metrics,
@@ -386,12 +387,12 @@ class BacktestReport:
             drawdown_data=drawdown_data,
             monthly_returns_data=monthly_returns_data,
             trades_data=trades_data,
-            trades=trades_data  # Add this for backward compatibility
+            fundamental_data=self.fundamental_data
         )
         
         # Save HTML report
-        output_path = os.path.join(output_dir, 'backtest_report.html')
-        with open(output_path, 'w') as f:
+        report_path = os.path.join(output_dir, 'backtest_report.html')
+        with open(report_path, 'w') as f:
             f.write(html_content)
 
     def _calculate_drawdowns(self) -> pd.Series:
@@ -403,7 +404,7 @@ class BacktestReport:
 
     def _get_metrics_dict(self) -> Dict[str, List[Dict[str, Any]]]:
         """Organize metrics into groups for HTML report"""
-        return {
+        metrics = {
             'Strategy Info': [
                 {'title': 'Strategy', 'value': self.strategy_name},
                 {'title': 'Symbol', 'value': self.symbol},
@@ -446,4 +447,5 @@ class BacktestReport:
                 {'title': 'Average Position Duration', 'value': f"{self.avg_position_duration:.1f} days"}
             ]
         }
+        return metrics
   

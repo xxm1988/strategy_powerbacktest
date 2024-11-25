@@ -10,6 +10,7 @@ from src.utils.logger import setup_logger
 from .backtest_report import BacktestReport
 from .portfolio import Portfolio
 from futu import OpenQuoteContext
+from .fundamental_data import FundamentalData
 
 @dataclass
 class TradeExecution:
@@ -59,15 +60,19 @@ class BacktestEngine:
     def run(self, data: pd.DataFrame, symbol: str) -> BacktestReport:
         """Execute backtest for the given data and symbol."""
         self.lot_size = self.fetch_lot_size(symbol)
-        self.symbol = symbol  # Add this line
+        self.symbol = symbol
         self._log_backtest_start(data, symbol)
+        
+        # Fetch fundamental data
+        fundamental_data = self.fetch_fundamental_data(symbol)
         
         signals = self.strategy.generate_signals(data)
         self.portfolio = self._calculate_portfolio(data, signals)
         trades = self._generate_trades_list(data, signals)
-        self.trades = trades
         
         metrics = self._calculate_metrics()
+        metrics['fundamental_data'] = fundamental_data  # Add fundamental data to metrics
+        
         self._log_backtest_summary(metrics)
         
         return BacktestReport.from_backtest_results(
@@ -174,6 +179,19 @@ class BacktestEngine:
         
         return portfolio
         
+    def _calculate_monthly_returns(self) -> pd.DataFrame:
+        """Calculate monthly returns from portfolio values"""
+        # Resample portfolio values to monthly frequency and calculate returns
+        monthly_values = self.portfolio['total'].resample('M').last()
+        monthly_returns = monthly_values.pct_change()
+        
+        # Create DataFrame with proper formatting
+        returns_df = pd.DataFrame({
+            'returns': monthly_returns
+        })
+        
+        return returns_df
+
     def _calculate_metrics(self) -> Dict[str, Any]:
         """Calculate comprehensive backtest metrics"""
         # Basic portfolio metrics
@@ -245,6 +263,8 @@ class BacktestEngine:
             'realized_pnl': realized_pnl,
             'floating_pnl': floating_pnl,
             'total_pnl': total_pnl,
+            'monthly_returns': self._calculate_monthly_returns(),
+
             
             # Position Information
             'open_positions': current_position
@@ -341,3 +361,50 @@ class BacktestEngine:
         if ret == 0:
             return data['lot_size'][0]
         return 1  # Default to 1 if unable to fetch
+        
+    def fetch_fundamental_data(self, symbol: str) -> FundamentalData:
+        """Fetch fundamental data from Futu OpenD"""
+        quote_ctx = OpenQuoteContext(host='127.0.0.1', port=11111)
+        
+        try:
+            # Get market snapshot for price and basic metrics
+            ret, snapshot = quote_ctx.get_market_snapshot([symbol])
+            if ret != 0:
+                raise ValueError(f"Failed to fetch market snapshot: {snapshot}")
+            
+            # Get stock basic info
+            ret, static_info = quote_ctx.get_stock_basicinfo(
+                market='HK', 
+                stock_type='STOCK', 
+                code_list=[symbol]
+            )
+            if ret != 0:
+                raise ValueError(f"Failed to fetch static info: {static_info}")
+            
+            # Extract data from responses
+            snapshot_data = snapshot.iloc[0]
+            static_data = static_info.iloc[0]
+            
+            return FundamentalData(
+                market_cap=snapshot_data.get('market_cap', 0),
+                pe_ratio=snapshot_data.get('pe_ratio', 0),
+                pb_ratio=snapshot_data.get('pb_ratio', 0),
+                dividend_yield=snapshot_data.get('dividend_ratio', 0),
+                industry=static_data.get('industry', 'N/A'),
+                lot_size=snapshot_data.get('lot_size', 0),
+                stock_name=static_data.get('name', 'N/A'),
+                stock_type=static_data.get('stock_type', 'N/A'),
+                listing_date=static_data.get('listing_date', 'N/A'),
+                total_shares=static_data.get('total_shares', 0),
+                float_shares=static_data.get('float_shares', 0),
+                current_price=snapshot_data.get('last_price', 0),
+                fifty_two_week_high=snapshot_data.get('highest52weeks_price', 0),
+                fifty_two_week_low=snapshot_data.get('lowest52weeks_price', 0),
+                avg_volume_3m=snapshot_data.get('volume_ratio', 0),
+                # Set optional fields to None since they're not available
+                eps=None,
+                net_profit_ttm=None,
+                net_profit_growth_ttm=None
+            )
+        finally:
+            quote_ctx.close()

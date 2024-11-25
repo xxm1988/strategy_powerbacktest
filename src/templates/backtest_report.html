@@ -132,6 +132,45 @@
             background-color: #ffe8e8;
             color: #de350b;
         }
+
+        .fundamental-metric {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .fundamental-metric:last-child {
+            border-bottom: none;
+        }
+        
+        .metric-label {
+            font-size: 0.8rem;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.25rem;
+        }
+        
+        .metric-value {
+            font-size: 1rem;
+            color: #2c3e50;
+        }
+        
+        .card {
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .card-title {
+            color: #2c3e50;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 0.75rem;
+        }
     </style>
 </head>
 <body>
@@ -145,6 +184,71 @@
     </div>
 
     <div class="container-fluid">
+        <!-- Company Information Section -->
+        <div class="section mb-5">
+            <h2 class="h4 mb-4">
+                <i class="fas fa-building me-2"></i>Company Profile
+            </h2>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h3 class="card-title h5 mb-4">Company Overview</h3>
+                            <div class="fundamental-metric">
+                                <div class="metric-label">Company Name</div>
+                                <div class="metric-value fw-bold">{{ fundamental_data.stock_name }}</div>
+                            </div>
+                            <div class="fundamental-metric">
+                                <div class="metric-label">Industry</div>
+                                <div class="metric-value">{{ fundamental_data.industry }}</div>
+                            </div>
+                            <div class="fundamental-metric">
+                                <div class="metric-label">Listing Date</div>
+                                <div class="metric-value">{{ fundamental_data.listing_date }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h3 class="card-title h5 mb-4">Key Metrics</h3>
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="fundamental-metric">
+                                        <div class="metric-label">Market Cap</div>
+                                        <div class="metric-value">${{ "{:,.2f}".format(fundamental_data.market_cap) }}B</div>
+                                    </div>
+                                    <div class="fundamental-metric">
+                                        <div class="metric-label">P/E Ratio</div>
+                                        <div class="metric-value">{{ "{:.2f}".format(fundamental_data.pe_ratio) }}</div>
+                                    </div>
+                                    <div class="fundamental-metric">
+                                        <div class="metric-label">P/B Ratio</div>
+                                        <div class="metric-value">{{ "{:.2f}".format(fundamental_data.pb_ratio) }}</div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="fundamental-metric">
+                                        <div class="metric-label">Dividend Yield</div>
+                                        <div class="metric-value">{{ "{:.2f}".format(fundamental_data.dividend_yield) }}%</div>
+                                    </div>
+                                    <div class="fundamental-metric">
+                                        <div class="metric-label">52-Week Range</div>
+                                        <div class="metric-value">${{ "{:.2f}".format(fundamental_data.fifty_two_week_low) }} - ${{ "{:.2f}".format(fundamental_data.fifty_two_week_high) }}</div>
+                                    </div>
+                                    <div class="fundamental-metric">
+                                        <div class="metric-label">3M Avg Volume</div>
+                                        <div class="metric-value">{{ "{:,.0f}".format(fundamental_data.avg_volume_3m) }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Performance Summary -->
         <div class="section">
             <h2 class="h4 mb-4">Performance Summary</h2>
