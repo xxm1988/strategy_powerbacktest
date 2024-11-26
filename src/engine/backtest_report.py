@@ -8,6 +8,8 @@ import seaborn as sns
 import os
 from jinja2 import Template
 from ..engine.fundamental_data import FundamentalData
+from .metrics.risk_metrics import RiskMetrics
+
 
 @dataclass
 class BacktestReport:
@@ -132,12 +134,12 @@ class BacktestReport:
                 total_return=metrics['total_return'],
                 annual_return=metrics['annual_return'],
                 sharpe_ratio=metrics['sharpe_ratio'],
-                sortino_ratio=cls._calculate_sortino_ratio(portfolio),
+                sortino_ratio=RiskMetrics.calculate_sortino_ratio(portfolio),
                 max_drawdown=metrics['max_drawdown'],
-                max_drawdown_duration=cls._calculate_drawdown_duration(portfolio),
-                volatility=portfolio['returns'].std() * np.sqrt(252),
-                value_at_risk=cls._calculate_var(portfolio),
-                beta=cls._calculate_beta(portfolio),
+                max_drawdown_duration=RiskMetrics.calculate_drawdown_duration(portfolio),
+                volatility=RiskMetrics.calculate_volatility(portfolio),
+                value_at_risk=RiskMetrics.calculate_value_at_risk(portfolio),
+                beta=RiskMetrics.calculate_beta(portfolio),
                 
                 total_trades=0,
                 winning_trades=0,
@@ -174,12 +176,12 @@ class BacktestReport:
             total_return=metrics['total_return'],
             annual_return=metrics['annual_return'],
             sharpe_ratio=metrics['sharpe_ratio'],
-            sortino_ratio=cls._calculate_sortino_ratio(portfolio),
+            sortino_ratio=RiskMetrics.calculate_sortino_ratio(portfolio),
             max_drawdown=metrics['max_drawdown'],
-            max_drawdown_duration=cls._calculate_drawdown_duration(portfolio),
-            volatility=portfolio['returns'].std() * np.sqrt(252),
-            value_at_risk=cls._calculate_var(portfolio),
-            beta=cls._calculate_beta(portfolio),
+            max_drawdown_duration=RiskMetrics.calculate_drawdown_duration(portfolio),
+            volatility=RiskMetrics.calculate_volatility(portfolio),
+            value_at_risk=RiskMetrics.calculate_value_at_risk(portfolio),
+            beta=RiskMetrics.calculate_beta(portfolio),
             
             total_trades=total_trades,
             winning_trades=len([t for t in trades_with_pnl if t['pnl'] > 0]),
@@ -242,58 +244,6 @@ class BacktestReport:
         return pd.DataFrame({'returns': monthly_returns})
 
     @staticmethod
-    def _calculate_sortino_ratio(portfolio: pd.DataFrame, risk_free_rate: float = 0.02) -> float:
-        """Calculate Sortino ratio using negative returns only"""
-        returns = portfolio['returns']
-        negative_returns = returns[returns < 0]
-        if len(negative_returns) == 0:
-            return np.inf
-        
-        excess_returns = returns.mean() * 252 - risk_free_rate
-        downside_std = np.sqrt(252) * np.sqrt(np.mean(negative_returns**2))
-        return excess_returns / downside_std if downside_std != 0 else 0
-
-    @staticmethod
-    def _calculate_drawdown_duration(portfolio: pd.DataFrame) -> int:
-        """Calculate maximum drawdown duration in days"""
-        # Ensure we're working with the portfolio's index
-        cumulative_returns = (1 + portfolio['returns']).cumprod()
-        rolling_max = cumulative_returns.expanding().max()
-        drawdowns = cumulative_returns / rolling_max - 1
-        
-        # Create drawdown periods with proper index alignment
-        is_drawdown = drawdowns < 0
-        drawdown_periods = pd.Series(range(len(drawdowns)), index=drawdowns.index)
-        drawdown_periods.loc[~is_drawdown] = np.nan
-        drawdown_periods = drawdown_periods.ffill()  # Using ffill() instead of fillna(method='ffill')
-        
-        # Calculate durations
-        if drawdown_periods.empty:
-            return 0
-        
-        # Group consecutive periods and find the longest one
-        drawdown_groups = (drawdown_periods.diff() != 0).cumsum()
-        durations = drawdown_groups.value_counts()
-        return int(durations.max()) if not durations.empty else 0
-
-    @staticmethod
-    def _calculate_var(portfolio: pd.DataFrame, confidence: float = 0.95) -> float:
-        """Calculate Value at Risk"""
-        returns = portfolio['returns']
-        return np.percentile(returns, (1 - confidence) * 100)
-
-    @staticmethod
-    def _calculate_beta(portfolio: pd.DataFrame, market_returns: pd.Series = None) -> float:
-        """Calculate portfolio beta against market returns"""
-        if market_returns is None:
-            return 1.0  # Default to 1.0 if no market data available
-        
-        returns = portfolio['returns']
-        covariance = returns.cov(market_returns)
-        market_variance = market_returns.var()
-        return covariance / market_variance if market_variance != 0 else 1.0
-
-    @staticmethod
     def _calculate_profit_factor(trades: List[Dict[str, Any]]) -> float:
         """Calculate profit factor (gross profits / gross losses)"""
         profits = sum(t['pnl'] for t in trades if t.get('pnl', 0) > 0)
@@ -345,9 +295,7 @@ class BacktestReport:
 
     def _generate_drawdown_chart(self, output_dir: str) -> None:
         """Generate drawdown chart"""
-        cumulative_returns = (1 + self.portfolio['returns']).cumprod()
-        rolling_max = cumulative_returns.expanding().max()
-        drawdowns = cumulative_returns / rolling_max - 1
+        drawdowns = RiskMetrics.calculate_drawdowns(self.portfolio)
         
         plt.figure(figsize=(12, 6))
         plt.plot(self.portfolio.index, drawdowns * 100)
