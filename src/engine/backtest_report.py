@@ -112,6 +112,56 @@ class BacktestReport:
         metrics: Dict[str, Any]
     ) -> 'BacktestReport':
         """Create a backtest report from raw backtest results"""
+        # Count all trades, not just those with PNL
+        total_trades = len(trades)
+        
+        # Filter trades with PNL for calculations that require it
+        trades_with_pnl = [t for t in trades if t.get('pnl') is not None]
+        
+        # Handle empty trades list
+        if not trades:
+            return cls(
+                strategy_name=metrics['strategy_name'],
+                symbol=metrics['symbol'],
+                start_date=portfolio.index[0],
+                end_date=portfolio.index[-1],
+                lot_size=metrics['lot_size'],
+                commission_rate=metrics['commission_rate'],
+                initial_capital=initial_capital,
+                final_portfolio_value=portfolio['total'].iloc[-1],
+                total_return=metrics['total_return'],
+                annual_return=metrics['annual_return'],
+                sharpe_ratio=metrics['sharpe_ratio'],
+                sortino_ratio=cls._calculate_sortino_ratio(portfolio),
+                max_drawdown=metrics['max_drawdown'],
+                max_drawdown_duration=cls._calculate_drawdown_duration(portfolio),
+                volatility=portfolio['returns'].std() * np.sqrt(252),
+                value_at_risk=cls._calculate_var(portfolio),
+                beta=cls._calculate_beta(portfolio),
+                
+                total_trades=0,
+                winning_trades=0,
+                losing_trades=0,
+                win_rate=0.0,
+                profit_factor=0.0,
+                avg_trade_return=0.0,
+                avg_win=0.0,
+                avg_loss=0.0,
+                largest_win=0.0,
+                largest_loss=0.0,
+                max_consecutive_wins=0,
+                max_consecutive_losses=0,
+                
+                avg_position_size=portfolio['position'].mean(),
+                max_position_size=portfolio['position'].max(),
+                avg_position_duration=0.0,
+                
+                portfolio=portfolio,
+                trades=trades,
+                monthly_returns=metrics['monthly_returns'],
+                fundamental_data=metrics['fundamental_data']
+            )
+
         return cls(
             strategy_name=metrics['strategy_name'],
             symbol=metrics['symbol'],
@@ -131,22 +181,22 @@ class BacktestReport:
             value_at_risk=cls._calculate_var(portfolio),
             beta=cls._calculate_beta(portfolio),
             
-            total_trades=len(trades),
-            winning_trades=len([t for t in trades if t.get('pnl', 0) > 0]),
-            losing_trades=len([t for t in trades if t.get('pnl', 0) < 0]),
+            total_trades=total_trades,
+            winning_trades=len([t for t in trades_with_pnl if t['pnl'] > 0]),
+            losing_trades=len([t for t in trades_with_pnl if t['pnl'] < 0]),
             win_rate=metrics['win_rate'],
-            profit_factor=cls._calculate_profit_factor(trades),
-            avg_trade_return=np.mean([t.get('pnl', 0) for t in trades]),
-            avg_win=np.mean([t['pnl'] for t in trades if t.get('pnl', 0) > 0]),
-            avg_loss=np.mean([t['pnl'] for t in trades if t.get('pnl', 0) < 0]),
-            largest_win=max([t.get('pnl', 0) for t in trades]),
-            largest_loss=min([t.get('pnl', 0) for t in trades]),
-            max_consecutive_wins=cls._calculate_consecutive_stats(trades, 'wins'),
-            max_consecutive_losses=cls._calculate_consecutive_stats(trades, 'losses'),
+            profit_factor=cls._calculate_profit_factor(trades_with_pnl),
+            avg_trade_return=np.mean([t['pnl'] for t in trades_with_pnl]),
+            avg_win=np.mean([t['pnl'] for t in trades_with_pnl if t['pnl'] > 0]) if any(t['pnl'] > 0 for t in trades_with_pnl) else 0.0,
+            avg_loss=np.mean([t['pnl'] for t in trades_with_pnl if t['pnl'] < 0]) if any(t['pnl'] < 0 for t in trades_with_pnl) else 0.0,
+            largest_win=max((t['pnl'] for t in trades_with_pnl), default=0.0),
+            largest_loss=min((t['pnl'] for t in trades_with_pnl), default=0.0),
+            max_consecutive_wins=cls._calculate_consecutive_stats(trades_with_pnl, 'wins'),
+            max_consecutive_losses=cls._calculate_consecutive_stats(trades_with_pnl, 'losses'),
             
             avg_position_size=portfolio['position'].mean(),
             max_position_size=portfolio['position'].max(),
-            avg_position_duration=cls._calculate_avg_position_duration(trades),
+            avg_position_duration=cls._calculate_avg_position_duration(trades_with_pnl),
             
             portfolio=portfolio,
             trades=trades,
@@ -270,8 +320,8 @@ class BacktestReport:
     def _calculate_avg_position_duration(trades: List[Dict[str, Any]]) -> float:
         """Calculate average position duration in days"""
         if not trades:
-            return 0
-            
+            return 0.0
+        
         durations = []
         for i in range(0, len(trades) - 1, 2):
             if i + 1 < len(trades):
@@ -279,7 +329,7 @@ class BacktestReport:
                 exit = pd.Timestamp(trades[i + 1]['timestamp'])
                 duration = (exit - entry).total_seconds() / (24 * 3600)  # Convert to days
                 durations.append(duration)
-        return np.mean(durations) if durations else 0
+        return float(np.mean(durations) if durations else 0.0)
 
     def _generate_equity_curve(self, output_dir: str) -> None:
         """Generate equity curve plot"""
