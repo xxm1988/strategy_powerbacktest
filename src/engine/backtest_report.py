@@ -9,6 +9,7 @@ import os
 from jinja2 import Template
 from ..engine.fundamental_data import FundamentalData
 from .metrics.risk_metrics import RiskMetrics
+from .metrics.return_metrics import ReturnMetrics
 
 
 @dataclass
@@ -119,6 +120,15 @@ class BacktestReport:
         
         # Filter trades with PNL for calculations that require it
         trades_with_pnl = [t for t in trades if t.get('pnl') is not None]
+
+        # Calculate returns using ReturnMetrics
+        final_value = portfolio['total'].iloc[-1]
+        total_return = ReturnMetrics.calculate_total_return(final_value, initial_capital)
+        annual_return = ReturnMetrics.calculate_annual_return(portfolio, total_return)
+        sharpe_ratio = ReturnMetrics.calculate_sharpe_ratio(portfolio)
+        monthly_returns = ReturnMetrics.calculate_monthly_returns(portfolio)
+        realized_pnl = ReturnMetrics.calculate_realized_pnl(trades)
+        floating_pnl = ReturnMetrics.calculate_floating_pnl(portfolio, trades)
         
         # Handle empty trades list
         if not trades:
@@ -231,17 +241,6 @@ class BacktestReport:
             
         except Exception as e:
             raise RuntimeError(f"Failed to generate backtest report: {str(e)}")
-  
-    @staticmethod
-    def _calculate_monthly_returns(portfolio: pd.DataFrame) -> pd.DataFrame:
-        """Calculate monthly returns from portfolio data"""
-        # Keep original monthly returns calculation for the chart
-        monthly_returns = portfolio['returns'].resample('ME').apply(
-            lambda x: (1 + x).prod() - 1
-        )
-        
-        # Create DataFrame with returns column
-        return pd.DataFrame({'returns': monthly_returns})
 
     @staticmethod
     def _calculate_profit_factor(trades: List[Dict[str, Any]]) -> float:

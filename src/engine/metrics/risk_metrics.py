@@ -65,4 +65,12 @@ class RiskMetrics:
     @staticmethod
     def calculate_volatility(portfolio: pd.DataFrame) -> float:
         """Calculate annualized volatility"""
-        return portfolio['returns'].std() * np.sqrt(252) 
+        return portfolio['returns'].std() * np.sqrt(252)
+
+    @staticmethod
+    def calculate_max_drawdown(portfolio: pd.DataFrame) -> float:
+        """Calculate maximum drawdown percentage"""
+        cumulative_returns = (1 + portfolio['returns']).cumprod()
+        rolling_max = cumulative_returns.expanding().max()
+        drawdowns = cumulative_returns / rolling_max - 1
+        return drawdowns.min()

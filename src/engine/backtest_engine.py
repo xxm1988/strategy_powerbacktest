@@ -11,6 +11,8 @@ from .backtest_report import BacktestReport
 from .portfolio import Portfolio
 from futu import OpenQuoteContext
 from .fundamental_data import FundamentalData
+from .metrics.return_metrics import ReturnMetrics
+from .metrics.risk_metrics import RiskMetrics
 
 @dataclass
 class TradeExecution:
@@ -194,28 +196,18 @@ class BacktestEngine:
 
     def _calculate_metrics(self) -> Dict[str, Any]:
         """Calculate comprehensive backtest metrics"""
-        # Basic portfolio metrics
+        # Use ReturnMetrics for calculations
         final_value = self.portfolio['total'].iloc[-1]
-        total_return = (final_value - self.initial_capital) / self.initial_capital
+        total_return = ReturnMetrics.calculate_total_return(final_value, self.initial_capital)
+        annual_return = ReturnMetrics.calculate_annual_return(self.portfolio, total_return)
+        sharpe_ratio = ReturnMetrics.calculate_sharpe_ratio(self.portfolio)
+        monthly_returns = ReturnMetrics.calculate_monthly_returns(self.portfolio)
+        realized_pnl = ReturnMetrics.calculate_realized_pnl(self.trades)
+        floating_pnl = ReturnMetrics.calculate_floating_pnl(self.portfolio, self.trades)
         
-        # Calculate annualized return
-        days = (self.portfolio.index[-1] - self.portfolio.index[0]).days
-        annual_return = (1 + total_return) ** (365 / days) - 1 if days > 0 else 0
-        
-        # Risk metrics
-        returns = self.portfolio['returns']
-        risk_free_rate = 0.02  # Assuming 2% risk-free rate
-        excess_returns = returns - risk_free_rate / 252
-        volatility = returns.std() * np.sqrt(252)
-        
-        # Sharpe ratio
-        sharpe_ratio = (excess_returns.mean() * 252) / volatility if volatility != 0 else 0
-        
-        # Maximum drawdown
-        cumulative_returns = (1 + returns).cumprod()
-        rolling_max = cumulative_returns.expanding().max()
-        drawdowns = cumulative_returns / rolling_max - 1
-        max_drawdown = drawdowns.min()
+        # Risk metrics using RiskMetrics class
+        volatility = RiskMetrics.calculate_volatility(self.portfolio)
+        max_drawdown = RiskMetrics.calculate_max_drawdown(self.portfolio)
         
         # Trading statistics
         winning_trades = sum(1 for trade in self.trades 
@@ -224,21 +216,9 @@ class BacktestEngine:
         total_trades = sum(1 for trade in self.trades 
                                 if trade.get('type').lower() == 'sell')
         win_rate = (winning_trades / total_trades) if total_trades > 0 else 0.0
-
-        # PnL calculations
+        
+        # Current position info
         current_position = self.portfolio['position'].iloc[-1]
-        realized_pnl = sum(t.get('pnl', 0) for t in self.trades if 'pnl' in t)
-        
-        # Calculate floating PnL if there's an open position
-        floating_pnl = 0
-        if current_position > 0:
-            last_buy_trade = next((t for t in reversed(self.trades) 
-                                 if t['type'] == 'buy'), None)
-            if last_buy_trade:
-                current_price = self.portfolio['close'].iloc[-1]
-                floating_pnl = (current_price - last_buy_trade['price']) * current_position
-        
-        total_pnl = realized_pnl + floating_pnl
         
         return {
             # Strategy Info
@@ -250,9 +230,10 @@ class BacktestEngine:
             # Capital and Returns
             'total_return': total_return,
             'annual_return': annual_return,
+            'sharpe_ratio': sharpe_ratio,
+            'monthly_returns': monthly_returns,
             
             # Risk Metrics
-            'sharpe_ratio': sharpe_ratio,
             'max_drawdown': max_drawdown,
             'volatility': volatility,
             
@@ -265,9 +246,7 @@ class BacktestEngine:
             # PnL Information
             'realized_pnl': realized_pnl,
             'floating_pnl': floating_pnl,
-            'total_pnl': total_pnl,
-            'monthly_returns': self._calculate_monthly_returns(),
-
+            'total_pnl': realized_pnl + floating_pnl,
             
             # Position Information
             'open_positions': current_position
