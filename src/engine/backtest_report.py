@@ -10,6 +10,7 @@ from jinja2 import Template
 from ..engine.fundamental_data import FundamentalData
 from .metrics.risk_metrics import RiskMetrics
 from .metrics.return_metrics import ReturnMetrics
+from .metrics.trade_metrics import TradeMetrics
 
 
 @dataclass
@@ -115,101 +116,50 @@ class BacktestReport:
         metrics: Dict[str, Any]
     ) -> 'BacktestReport':
         """Create a backtest report from raw backtest results"""
-        # Count all trades, not just those with PNL
-        total_trades = len(trades)
-        
-        # Filter trades with PNL for calculations that require it
-        trades_with_pnl = [t for t in trades if t.get('pnl') is not None]
-
-        # Calculate returns using ReturnMetrics
-        final_value = portfolio['total'].iloc[-1]
-        total_return = ReturnMetrics.calculate_total_return(final_value, initial_capital)
-        annual_return = ReturnMetrics.calculate_annual_return(portfolio, total_return)
-        sharpe_ratio = ReturnMetrics.calculate_sharpe_ratio(portfolio)
-        monthly_returns = ReturnMetrics.calculate_monthly_returns(portfolio)
-        realized_pnl = ReturnMetrics.calculate_realized_pnl(trades)
-        floating_pnl = ReturnMetrics.calculate_floating_pnl(portfolio, trades)
-        
-        # Handle empty trades list
-        if not trades:
-            return cls(
-                strategy_name=metrics['strategy_name'],
-                symbol=metrics['symbol'],
-                start_date=portfolio.index[0],
-                end_date=portfolio.index[-1],
-                lot_size=metrics['lot_size'],
-                commission_rate=metrics['commission_rate'],
-                initial_capital=initial_capital,
-                final_portfolio_value=portfolio['total'].iloc[-1],
-                total_return=metrics['total_return'],
-                annual_return=metrics['annual_return'],
-                sharpe_ratio=metrics['sharpe_ratio'],
-                sortino_ratio=RiskMetrics.calculate_sortino_ratio(portfolio),
-                max_drawdown=metrics['max_drawdown'],
-                max_drawdown_duration=RiskMetrics.calculate_drawdown_duration(portfolio),
-                volatility=RiskMetrics.calculate_volatility(portfolio),
-                value_at_risk=RiskMetrics.calculate_value_at_risk(portfolio),
-                beta=RiskMetrics.calculate_beta(portfolio),
-                
-                total_trades=0,
-                winning_trades=0,
-                losing_trades=0,
-                win_rate=0.0,
-                profit_factor=0.0,
-                avg_trade_return=0.0,
-                avg_win=0.0,
-                avg_loss=0.0,
-                largest_win=0.0,
-                largest_loss=0.0,
-                max_consecutive_wins=0,
-                max_consecutive_losses=0,
-                
-                avg_position_size=portfolio['position'].mean(),
-                max_position_size=portfolio['position'].max(),
-                avg_position_duration=0.0,
-                
-                portfolio=portfolio,
-                trades=trades,
-                monthly_returns=metrics['monthly_returns'],
-                fundamental_data=metrics['fundamental_data']
-            )
-
         return cls(
+            # Basic Info
             strategy_name=metrics['strategy_name'],
             symbol=metrics['symbol'],
             start_date=portfolio.index[0],
             end_date=portfolio.index[-1],
             lot_size=metrics['lot_size'],
             commission_rate=metrics['commission_rate'],
+            
+            # Capital and Returns
             initial_capital=initial_capital,
             final_portfolio_value=portfolio['total'].iloc[-1],
             total_return=metrics['total_return'],
             annual_return=metrics['annual_return'],
+            
+            # Risk Metrics
             sharpe_ratio=metrics['sharpe_ratio'],
-            sortino_ratio=RiskMetrics.calculate_sortino_ratio(portfolio),
+            sortino_ratio=metrics['sortino_ratio'],
             max_drawdown=metrics['max_drawdown'],
-            max_drawdown_duration=RiskMetrics.calculate_drawdown_duration(portfolio),
-            volatility=RiskMetrics.calculate_volatility(portfolio),
-            value_at_risk=RiskMetrics.calculate_value_at_risk(portfolio),
-            beta=RiskMetrics.calculate_beta(portfolio),
+            max_drawdown_duration=metrics['max_drawdown_duration'],
+            volatility=metrics['volatility'],
+            value_at_risk=metrics['value_at_risk'],
+            beta=metrics['beta'],
             
-            total_trades=total_trades,
-            winning_trades=len([t for t in trades_with_pnl if t['pnl'] > 0]),
-            losing_trades=len([t for t in trades_with_pnl if t['pnl'] < 0]),
+            # Trading Statistics
+            total_trades=metrics['total_trades'],
+            winning_trades=metrics['winning_trades'],
+            losing_trades=metrics['losing_trades'],
             win_rate=metrics['win_rate'],
-            profit_factor=cls._calculate_profit_factor(trades_with_pnl),
-            avg_trade_return=np.mean([t['pnl'] for t in trades_with_pnl]),
-            avg_win=np.mean([t['pnl'] for t in trades_with_pnl if t['pnl'] > 0]) if any(t['pnl'] > 0 for t in trades_with_pnl) else 0.0,
-            avg_loss=np.mean([t['pnl'] for t in trades_with_pnl if t['pnl'] < 0]) if any(t['pnl'] < 0 for t in trades_with_pnl) else 0.0,
-            largest_win=max((t['pnl'] for t in trades_with_pnl), default=0.0),
-            largest_loss=min((t['pnl'] for t in trades_with_pnl), default=0.0),
-            max_consecutive_wins=cls._calculate_consecutive_stats(trades_with_pnl, 'wins'),
-            max_consecutive_losses=cls._calculate_consecutive_stats(trades_with_pnl, 'losses'),
+            profit_factor=metrics['profit_factor'],
+            avg_trade_return=metrics['avg_trade_return'],
+            avg_win=metrics['avg_win'],
+            avg_loss=metrics['avg_loss'],
+            largest_win=metrics['largest_win'],
+            largest_loss=metrics['largest_loss'],
+            max_consecutive_wins=metrics['max_consecutive_wins'],
+            max_consecutive_losses=metrics['max_consecutive_losses'],
             
-            avg_position_size=portfolio['position'].mean(),
-            max_position_size=portfolio['position'].max(),
-            avg_position_duration=cls._calculate_avg_position_duration(trades_with_pnl),
+            # Position Info
+            avg_position_size=metrics['avg_position_size'],
+            max_position_size=metrics['max_position_size'],
+            avg_position_duration=metrics['avg_position_duration'],
             
+            # Time Series Data
             portfolio=portfolio,
             trades=trades,
             monthly_returns=metrics['monthly_returns'],
@@ -241,44 +191,6 @@ class BacktestReport:
             
         except Exception as e:
             raise RuntimeError(f"Failed to generate backtest report: {str(e)}")
-
-    @staticmethod
-    def _calculate_profit_factor(trades: List[Dict[str, Any]]) -> float:
-        """Calculate profit factor (gross profits / gross losses)"""
-        profits = sum(t['pnl'] for t in trades if t.get('pnl', 0) > 0)
-        losses = abs(sum(t['pnl'] for t in trades if t.get('pnl', 0) < 0))
-        return profits / losses if losses != 0 else float('inf')
-
-    @staticmethod
-    def _calculate_consecutive_stats(trades: List[Dict[str, Any]], stat_type: str) -> int:
-        """Calculate maximum consecutive wins or losses"""
-        if not trades:
-            return 0
-            
-        current_streak = max_streak = 0
-        for trade in trades:
-            pnl = trade.get('pnl', 0)
-            if (stat_type == 'wins' and pnl > 0) or (stat_type == 'losses' and pnl < 0):
-                current_streak += 1
-                max_streak = max(max_streak, current_streak)
-            else:
-                current_streak = 0
-        return max_streak
-
-    @staticmethod
-    def _calculate_avg_position_duration(trades: List[Dict[str, Any]]) -> float:
-        """Calculate average position duration in days"""
-        if not trades:
-            return 0.0
-        
-        durations = []
-        for i in range(0, len(trades) - 1, 2):
-            if i + 1 < len(trades):
-                entry = pd.Timestamp(trades[i]['timestamp'])
-                exit = pd.Timestamp(trades[i + 1]['timestamp'])
-                duration = (exit - entry).total_seconds() / (24 * 3600)  # Convert to days
-                durations.append(duration)
-        return float(np.mean(durations) if durations else 0.0)
 
     def _generate_equity_curve(self, output_dir: str) -> None:
         """Generate equity curve plot"""

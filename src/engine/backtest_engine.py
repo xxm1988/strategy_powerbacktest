@@ -13,6 +13,7 @@ from futu import OpenQuoteContext
 from .fundamental_data import FundamentalData
 from .metrics.return_metrics import ReturnMetrics
 from .metrics.risk_metrics import RiskMetrics
+from .metrics.trade_metrics import TradeMetrics
 
 @dataclass
 class TradeExecution:
@@ -195,30 +196,57 @@ class BacktestEngine:
         return returns_df
 
     def _calculate_metrics(self) -> Dict[str, Any]:
-        """Calculate comprehensive backtest metrics"""
-        # Use ReturnMetrics for calculations
+        """Calculate comprehensive backtest metrics using metric classes"""
         final_value = self.portfolio['total'].iloc[-1]
+        trades_with_pnl = [t for t in self.trades if t.get('pnl') is not None]
+        
+        # Return metrics - calculate total_return first
         total_return = ReturnMetrics.calculate_total_return(final_value, self.initial_capital)
-        annual_return = ReturnMetrics.calculate_annual_return(self.portfolio, total_return)
-        sharpe_ratio = ReturnMetrics.calculate_sharpe_ratio(self.portfolio)
-        monthly_returns = ReturnMetrics.calculate_monthly_returns(self.portfolio)
-        realized_pnl = ReturnMetrics.calculate_realized_pnl(self.trades)
-        floating_pnl = ReturnMetrics.calculate_floating_pnl(self.portfolio, self.trades)
         
-        # Risk metrics using RiskMetrics class
-        volatility = RiskMetrics.calculate_volatility(self.portfolio)
-        max_drawdown = RiskMetrics.calculate_max_drawdown(self.portfolio)
+        return_metrics = {
+            'total_return': total_return,  # Now we can use total_return
+            'annual_return': ReturnMetrics.calculate_annual_return(self.portfolio, total_return),
+            'sharpe_ratio': ReturnMetrics.calculate_sharpe_ratio(self.portfolio),
+            'monthly_returns': ReturnMetrics.calculate_monthly_returns(self.portfolio)
+        }
         
-        # Trading statistics
-        winning_trades = sum(1 for trade in self.trades 
-                            if trade.get('type').lower() == 'sell' 
-                            and trade.get('pnl', 0) > 0)
-        total_trades = sum(1 for trade in self.trades 
-                                if trade.get('type').lower() == 'sell')
-        win_rate = (winning_trades / total_trades) if total_trades > 0 else 0.0
+        # Risk metrics
+        risk_metrics = {
+            'volatility': RiskMetrics.calculate_volatility(self.portfolio),
+            'max_drawdown': RiskMetrics.calculate_max_drawdown(self.portfolio),
+            'max_drawdown_duration': RiskMetrics.calculate_drawdown_duration(self.portfolio),
+            'value_at_risk': RiskMetrics.calculate_value_at_risk(self.portfolio),
+            'beta': RiskMetrics.calculate_beta(self.portfolio),
+            'sortino_ratio': RiskMetrics.calculate_sortino_ratio(self.portfolio)
+        }
         
-        # Current position info
-        current_position = self.portfolio['position'].iloc[-1]
+        # Trade metrics
+        trade_metrics = {
+            'total_trades': len(trades_with_pnl),
+            'winning_trades': sum(1 for t in trades_with_pnl if t.get('pnl', 0) > 0),
+            'losing_trades': sum(1 for t in trades_with_pnl if t.get('pnl', 0) < 0),
+            'win_rate': TradeMetrics.calculate_win_rate(trades_with_pnl),
+            'profit_factor': TradeMetrics.calculate_profit_factor(trades_with_pnl),
+            **TradeMetrics.calculate_trade_stats(trades_with_pnl),
+            'max_consecutive_wins': TradeMetrics.calculate_consecutive_stats(trades_with_pnl, 'wins'),
+            'max_consecutive_losses': TradeMetrics.calculate_consecutive_stats(trades_with_pnl, 'losses'),
+            'avg_position_duration': TradeMetrics.calculate_position_duration(trades_with_pnl),
+            
+            # Add PnL calculations
+            'realized_pnl': sum(t.get('pnl', 0) for t in trades_with_pnl),
+            'floating_pnl': (self.portfolio['position'].iloc[-1] * self.portfolio['close'].iloc[-1]) - 
+                            (self.portfolio['position'].iloc[-1] * trades_with_pnl[-1]['price'] if trades_with_pnl else 0),
+        }
+        
+        # Add total_pnl calculation
+        trade_metrics['total_pnl'] = trade_metrics['realized_pnl'] + trade_metrics['floating_pnl']
+        
+        # Position metrics
+        position_metrics = {
+            'avg_position_size': self.portfolio['position'].mean(),
+            'max_position_size': self.portfolio['position'].max(),
+            'current_position': self.portfolio['position'].iloc[-1]
+        }
         
         return {
             # Strategy Info
@@ -227,29 +255,11 @@ class BacktestEngine:
             'lot_size': self.lot_size,
             'commission_rate': self.commission,
             
-            # Capital and Returns
-            'total_return': total_return,
-            'annual_return': annual_return,
-            'sharpe_ratio': sharpe_ratio,
-            'monthly_returns': monthly_returns,
-            
-            # Risk Metrics
-            'max_drawdown': max_drawdown,
-            'volatility': volatility,
-            
-            # Trading Statistics
-            'win_rate': win_rate,
-            'total_trades': total_trades,
-            'winning_trades': winning_trades,
-            'losing_trades': total_trades - winning_trades,
-            
-            # PnL Information
-            'realized_pnl': realized_pnl,
-            'floating_pnl': floating_pnl,
-            'total_pnl': realized_pnl + floating_pnl,
-            
-            # Position Information
-            'open_positions': current_position
+            # Combine all metrics
+            **return_metrics,
+            **risk_metrics,
+            **trade_metrics,
+            **position_metrics
         }
         
     def _generate_trades_list(self, data: pd.DataFrame, signals: pd.Series) -> List[Dict]:
