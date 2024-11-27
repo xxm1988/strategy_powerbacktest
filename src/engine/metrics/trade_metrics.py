@@ -77,4 +77,20 @@ class TradeMetrics:
                 duration = (exit - entry).total_seconds() / (24 * 3600)  # Convert to days
                 durations.append(duration)
         return float(np.mean(durations) if durations else 0.0)
+    
+    @staticmethod
+    def calculate_trade_counts(trades: List[Dict[str, Any]]) -> Dict[str, int]:
+        """Calculate basic trade count statistics"""
+        if not trades:
+            return {
+                'total_trades': 0,
+                'winning_trades': 0,
+                'losing_trades': 0
+            }
+        
+        return {
+            'total_trades': len(trades),
+            'winning_trades': sum(1 for t in trades if t.get('pnl', 0) > 0),
+            'losing_trades': sum(1 for t in trades if t.get('pnl', 0) < 0)
+        }
  

@@ -222,9 +222,7 @@ class BacktestEngine:
         
         # Trade metrics
         trade_metrics = {
-            'total_trades': len(trades_with_pnl),
-            'winning_trades': sum(1 for t in trades_with_pnl if t.get('pnl', 0) > 0),
-            'losing_trades': sum(1 for t in trades_with_pnl if t.get('pnl', 0) < 0),
+            **TradeMetrics.calculate_trade_counts(trades_with_pnl),
             'win_rate': TradeMetrics.calculate_win_rate(trades_with_pnl),
             'profit_factor': TradeMetrics.calculate_profit_factor(trades_with_pnl),
             **TradeMetrics.calculate_trade_stats(trades_with_pnl),
@@ -232,10 +230,9 @@ class BacktestEngine:
             'max_consecutive_losses': TradeMetrics.calculate_consecutive_stats(trades_with_pnl, 'losses'),
             'avg_position_duration': TradeMetrics.calculate_position_duration(trades_with_pnl),
             
-            # Add PnL calculations
-            'realized_pnl': sum(t.get('pnl', 0) for t in trades_with_pnl),
-            'floating_pnl': (self.portfolio['position'].iloc[-1] * self.portfolio['close'].iloc[-1]) - 
-                            (self.portfolio['position'].iloc[-1] * trades_with_pnl[-1]['price'] if trades_with_pnl else 0),
+            # Use ReturnMetrics for PnL calculations
+            'realized_pnl': ReturnMetrics.calculate_realized_pnl(trades_with_pnl),
+            'floating_pnl': ReturnMetrics.calculate_floating_pnl(self.portfolio, trades_with_pnl)
         }
         
         # Add total_pnl calculation
