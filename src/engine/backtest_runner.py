@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 import pandas as pd
 import os
 
@@ -14,11 +14,12 @@ class BacktestConfig:
     """Configuration for backtest run"""
     strategy_name: str
     strategy_params: Dict
-    symbol: str
+    symbols: List[str]
     start_date: datetime
     end_date: datetime
     initial_capital: float
     commission: float
+    slippage: float = 0.0001  # Default value if not provided
 
 class BacktestRunner:
     """
@@ -42,7 +43,7 @@ class BacktestRunner:
     
     def run(self, config: BacktestConfig) -> str:
         """
-        Run backtest with given configuration
+        Run backtest with multiple symbols
         
         Args:
             config (BacktestConfig): Backtest configuration
@@ -53,12 +54,14 @@ class BacktestRunner:
         Raises:
             ValueError: If strategy creation fails
         """
-        # Fetch historical data
-        data = self.data_fetcher.fetch_historical_data(
-            symbol=config.symbol,
-            start=config.start_date,
-            end=config.end_date
-        )
+        # Fetch data for all symbols in parallel
+        data_dict = {}
+        for symbol in config.symbols:
+            data_dict[symbol] = self.data_fetcher.fetch_historical_data(
+                symbol=symbol,
+                start=config.start_date,
+                end=config.end_date
+            )
         
         # Create strategy
         strategy = StrategyFactory.create_strategy(
@@ -73,13 +76,11 @@ class BacktestRunner:
             commission=config.commission
         )
         
-        results = engine.run(data, config.symbol)
-        
-        # Create output directory if it doesn't exist
-        output_dir = os.path.join(os.getcwd(), 'reports')
-        os.makedirs(output_dir, exist_ok=True)
+        results = engine.run_multi_symbol(data_dict)
         
         # Generate report
+        output_dir = os.path.join(os.getcwd(), 'reports')
+        os.makedirs(output_dir, exist_ok=True)
         results.generate_report(output_dir)
         
-        return os.path.join(output_dir, 'backtest_report.html') 
+        return os.path.join(output_dir, 'multi_symbol_backtest_report.html') 

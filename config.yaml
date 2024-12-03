@@ -11,9 +11,6 @@ backtest:
   initial_capital: 100000.0
   commission: 0.001
   slippage: 0.0001
-  position_size: 1.0
-  max_positions: 5
-  risk_free_rate: 0.02
 
 # Data Configuration
 data:
@@ -58,9 +55,6 @@ strategy:
     vol_period: 88
     rsi_period: 9
     pattern_lookback: 120
-    position_size: 1.0
-    max_positions: 1
-    risk_factor: 0.02
 
 # Logging Configuration
 logging:

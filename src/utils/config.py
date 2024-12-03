@@ -41,3 +41,9 @@ class Config:
     @property
     def logging_config(self) -> Dict[str, Any]:
         return self.config.get('logging', {})
+        
+    def get_strategy_params(self, strategy_name):
+        """
+        Get strategy-specific parameters from config file
+        """
+        return self.strategy.get(strategy_name, {})

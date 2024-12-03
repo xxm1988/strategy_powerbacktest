@@ -380,4 +380,38 @@ class BacktestReport:
             ]
         }
         return metrics
+
+    def _prepare_trade_annotations(self) -> List[Dict]:
+        """Prepare trade annotations for visualization"""
+        annotations = []
+        for trade in self.trades:
+            trade_type = trade['type'].upper()
+            price = trade['price']
+            quantity = trade['quantity']
+            timestamp = trade['timestamp']
+            
+            # Convert timestamp to milliseconds, handling both string and datetime
+            if isinstance(timestamp, str):
+                timestamp_ms = int(pd.Timestamp(timestamp).timestamp() * 1000)
+            else:
+                timestamp_ms = int(timestamp.timestamp() * 1000)
+            
+            annotation = {
+                'x': timestamp_ms,
+                'y': price,
+                'type': trade_type,
+                'quantity': quantity,
+                'text': f"{trade_type}: {quantity} @ ${price:.2f}"
+            }
+            
+            if trade_type == 'SELL':
+                pnl = trade.get('pnl', 0)
+                annotation['text'] += f" (PnL: ${pnl:.2f})"
+                annotation['color'] = 'green' if pnl > 0 else 'red'
+            else:
+                annotation['color'] = 'blue'
+            
+            annotations.append(annotation)
+        
+        return annotations
   

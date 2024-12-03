@@ -14,6 +14,8 @@ from .fundamental_data import FundamentalData
 from .metrics.return_metrics import ReturnMetrics
 from .metrics.risk_metrics import RiskMetrics
 from .metrics.trade_metrics import TradeMetrics
+from .multi_symbol_backtest_report import MultiSymbolBacktestReport
+from .symbol_results import SymbolResults
 
 @dataclass
 class TradeExecution:
@@ -126,7 +128,7 @@ class BacktestEngine:
     def _log_backtest_summary(self, metrics: Dict[str, Any]) -> None:
         """Log final backtest results"""
         self.logger.info("\n" + "=" * 50)
-        self.logger.info("Backtest Summary:")
+        self.logger.info(f"Backtest Summary {self.symbol}:")
         self.logger.info(f"Total Return: {metrics['total_return']*100:.2f}%")
         self.logger.info(f"Annual Return: {metrics['annual_return']*100:.2f}%")
         self.logger.info(f"Sharpe Ratio: {metrics['sharpe_ratio']:.2f}")
@@ -290,7 +292,7 @@ class BacktestEngine:
                     last_buy_price = price
                     
                     self.logger.info(
-                        f"Trade executed at {timestamp}: BUY "
+                        f"[{self.symbol}] Trade executed at {timestamp}: BUY "
                         f"{lots_to_buy} units ({lots_to_buy//self.lot_size} lots) at ${price:.2f} "
                         f"(Cost: ${cost:,.2f}, Commission: ${cost - (lots_to_buy * price):.2f})"
                     )
@@ -314,7 +316,7 @@ class BacktestEngine:
                 trades.append(trade)
                 
                 self.logger.info(
-                    f"Trade executed at {timestamp}: SELL "
+                    f"[{self.symbol}] Trade executed at {timestamp}: SELL "
                     f"{current_position} units ({current_position//self.lot_size} lots) at ${price:.2f} "
                     f"(Proceeds: ${proceeds:,.2f}, Commission: ${(current_position * price) - proceeds:.2f})"
                 )
@@ -397,3 +399,30 @@ class BacktestEngine:
             )
         finally:
             quote_ctx.close()
+        
+    def run_multi_symbol(self, data_dict: Dict[str, pd.DataFrame]) -> MultiSymbolBacktestReport:
+        """
+        Execute backtest for multiple symbols.
+        
+        Args:
+            data_dict: Dictionary mapping symbols to their historical data
+        
+        Returns:
+            MultiSymbolBacktestReport: Consolidated report for all symbols
+        """
+        symbol_results = {}
+        
+        for symbol, data in data_dict.items():
+            # Run individual backtest for each symbol
+            report = self.run(data, symbol)
+            symbol_results[symbol] = SymbolResults.from_backtest_report(report)
+        
+        # Create multi-symbol report
+        return MultiSymbolBacktestReport(
+            strategy_name=self.strategy.__class__.__name__,
+            start_date=pd.to_datetime(min(data.index.min() for data in data_dict.values())),
+            end_date=pd.to_datetime(max(data.index.max() for data in data_dict.values())),
+            initial_capital=self.initial_capital,
+            commission_rate=self.commission,
+            symbol_results=symbol_results
+        )

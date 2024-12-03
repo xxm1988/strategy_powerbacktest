@@ -26,9 +26,10 @@ def create_cli_parser() -> ArgumentParser:
     
     # Symbol selection
     parser.add_argument(
-        '--symbol',
-        type=str,
-        help='Trading symbol (e.g., HK.00700)'
+        '--symbols',
+        nargs='+',
+        required=True,
+        help='List of symbols to backtest (e.g., AAPL MSFT GOOG)'
     )
     
     # Date range
@@ -61,21 +62,38 @@ def create_cli_parser() -> ArgumentParser:
 
 def get_backtest_config(args: Any, config: Config) -> Dict[str, Any]:
     """
-    Merge command line arguments with config file values
-    
-    Args:
-        args: Parsed command line arguments
-        config: Configuration object from config.yaml
-        
-    Returns:
-        Dict containing final configuration values
+    Merge command line arguments with config file settings to create backtest configuration
     """
-    return {
-        'strategy_name': args.strategy or config.strategy.get('default', 'macd'),
-        'strategy_params': config.strategy[args.strategy] if args.strategy else config.strategy['macd'],
-        'symbol': args.symbol or config.backtest_config.get('default_symbol', 'HK.00700'),
-        'start_date': args.start_date or datetime(2023, 1, 1),
-        'end_date': args.end_date or datetime(2023, 12, 31),
-        'initial_capital': args.initial_capital or config.backtest_config['initial_capital'],
-        'commission': args.commission or config.backtest_config['commission']
-    } 
+    # Start with default values from config file
+    backtest_params = config.backtest_config.copy() if hasattr(config, 'backtest_config') else {}
+
+    # Override with command line arguments if provided
+    if args.symbols:
+        backtest_params['symbols'] = args.symbols
+    
+    if args.strategy:
+        backtest_params['strategy_name'] = args.strategy
+    
+    if args.start_date:
+        if isinstance(args.start_date, datetime):
+            backtest_params['start_date'] = args.start_date
+        else:
+            backtest_params['start_date'] = datetime.strptime(args.start_date, '%Y-%m-%d')
+
+    if args.end_date:
+        if isinstance(args.end_date, datetime):
+            backtest_params['end_date'] = args.end_date
+        else:
+            backtest_params['start_date'] = datetime.strptime(args.start_date, '%Y-%m-%d')
+    
+    if args.initial_capital:
+        backtest_params['initial_capital'] = args.initial_capital
+    
+    if args.commission:
+        backtest_params['commission'] = args.commission
+    
+    # Add strategy parameters if provided in config
+    strategy_params = config.get_strategy_params(backtest_params['strategy_name'])
+    backtest_params['strategy_params'] = strategy_params if strategy_params else {}
+    
+    return backtest_params 
