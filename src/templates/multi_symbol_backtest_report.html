@@ -15,6 +15,8 @@
     <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.noStyle.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-grid.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-theme-alpine.css">
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <link href="https://cdn.jsdelivr.net/npm/apexcharts/dist/apexcharts.css" rel="stylesheet">
     
     <style>
         body {
@@ -145,8 +147,13 @@
             background: white;
             border-radius: 1rem;
             padding: 2rem;
-            margin: 3rem 0;
+            margin: 2rem 0;
             box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        #correlationMatrix {
+            min-height: 400px;
+            margin: 1rem 0;
         }
 
         .badge {
@@ -361,6 +368,175 @@
             color: #ff1744;
             font-weight: 600;
         }
+
+        .metrics-dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .metric-card-large {
+            grid-column: 1 / -1;
+            background: white;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .metric-card-medium {
+            background: white;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .metric-header {
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .metric-header h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin: 0;
+        }
+
+        .metric-header h3 i {
+            margin-right: 0.5rem;
+            opacity: 0.8;
+        }
+
+        .performance-highlights {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .highlight-stats {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .stat-item {
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 0.75rem;
+            transition: transform 0.2s;
+        }
+
+        .stat-item:hover {
+            transform: translateY(-2px);
+            background: #e9ecef;
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: #6c757d;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .trading-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .stat-box {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .stat-box:hover {
+            transform: translateY(-2px);
+            background: #e9ecef;
+        }
+
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border-radius: 50%;
+            margin-right: 1rem;
+        }
+
+        .stat-icon i {
+            font-size: 1.25rem;
+            color: #3498db;
+        }
+
+        .risk-details {
+            margin-top: 1.5rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .detail-item {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            transition: transform 0.2s;
+        }
+
+        .detail-item:hover {
+            transform: translateY(-2px);
+            background: #e9ecef;
+        }
+
+        .detail-label {
+            display: block;
+            font-size: 0.875rem;
+            color: #6c757d;
+            margin-bottom: 0.5rem;
+        }
+
+        .detail-value {
+            display: block;
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+
+        /* Adjust radar chart container */
+        #riskRadar-{{ symbol }} {
+            height: 300px;
+            margin: 0 auto;
+        }
+
+        /* Risk metrics card specific adjustments */
+        .metric-card-medium .metric-content {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .correlation-matrix {
+            background: white;
+            border-radius: 1rem;
+            padding: 2rem;
+            margin: 2rem 0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        #correlationMatrix {
+            min-height: 400px;
+            margin: 1rem 0;
+        }
     </style>
 </head>
 <body>
@@ -383,9 +559,11 @@
     </div>
 
     <!-- Correlation Matrix -->
-    <div class="correlation-matrix">
-        <h2>Symbol Correlation Matrix</h2>
-        <div id="correlationMatrix" style="height: 400px;"></div>
+    <div class="correlation-matrix" data-aos="fade-up">
+        <div class="metric-header">
+            <h3><i class="fas fa-project-diagram"></i> Symbol Correlation Matrix</h3>
+        </div>
+        <div id="correlationMatrix"></div>
     </div>
 
     <!-- Portfolio Performance -->
@@ -406,45 +584,78 @@
             </div>
         </div>
 
-        <!-- Metrics Grid -->
-        <div class="metrics-grid">
-            <!-- Performance Metrics -->
-            <div class="metric-group" data-aos="fade-up">
-                <h3><i class="fas fa-chart-line"></i> Performance Metrics</h3>
-                {% for metric in results.metrics['Performance Metrics'] %}
-                <div class="metric-card">
-                    <div class="metric-title">{{ metric.title }}</div>
-                    <div class="metric-value {% if metric.color %}{{ metric.color }}{% endif %}">
-                        {{ metric.value }}
+        <!-- Metrics Dashboard -->
+        <div class="metrics-dashboard">
+            <!-- Performance Overview -->
+            <div class="metric-card-large" data-aos="fade-up">
+                <div class="metric-header">
+                    <h3><i class="fas fa-chart-line"></i> Performance Overview</h3>
+                </div>
+                <div class="metric-content">
+                    <div class="trading-stats-grid">
+                        {% for metric in results.metrics['Performance Metrics'] %}
+                        <div class="stat-box">
+                            <div class="stat-icon">
+                                <i class="fas fa-{{ 'arrow-trend-up' if 'return' in metric.title.lower() else 'chart-line' if 'alpha' in metric.title.lower() or 'beta' in metric.title.lower() else 'calculator' }}"></i>
+                            </div>
+                            <div class="stat-info">
+                                <div class="stat-label">{{ metric.title }}</div>
+                                <div class="stat-value {% if metric.color %}{{ metric.color }}{% endif %}">
+                                    {{ metric.value }}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
                     </div>
                 </div>
-                {% endfor %}
             </div>
 
-            <!-- Risk Metrics -->
-            <div class="metric-group" data-aos="fade-up" data-aos-delay="100">
-                <h3><i class="fas fa-shield-alt"></i> Risk Metrics</h3>
-                {% for metric in results.metrics['Risk Metrics'] %}
-                <div class="metric-card">
-                    <div class="metric-title">{{ metric.title }}</div>
-                    <div class="metric-value {% if metric.color %}{{ metric.color }}{% endif %}">
-                        {{ metric.value }}
+            <!-- Risk Analysis -->
+            <div class="metric-card-medium" data-aos="fade-up" data-aos-delay="100">
+                <div class="metric-header">
+                    <h3><i class="fas fa-shield-alt"></i> Risk Analysis</h3>
+                </div>
+                <div class="metric-content">
+                    <div class="trading-stats-grid">
+                        {% for metric in results.metrics['Risk Metrics'] %}
+                        <div class="stat-box">
+                            <div class="stat-icon">
+                                <i class="fas fa-{{ 'chart-area' if 'drawdown' in metric.title.lower() else 'chart-line' if 'volatility' in metric.title.lower() else 'shield' }}"></i>
+                            </div>
+                            <div class="stat-info">
+                                <div class="stat-label">{{ metric.title }}</div>
+                                <div class="stat-value {% if metric.color %}{{ metric.color }}{% endif %}">
+                                    {{ metric.value }}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
                     </div>
                 </div>
-                {% endfor %}
             </div>
 
             <!-- Trading Statistics -->
-            <div class="metric-group" data-aos="fade-up" data-aos-delay="200">
-                <h3><i class="fas fa-calculator"></i> Trading Statistics</h3>
-                {% for metric in results.metrics['Trading Statistics'] %}
-                <div class="metric-card">
-                    <div class="metric-title">{{ metric.title }}</div>
-                    <div class="metric-value {% if metric.color %}{{ metric.color }}{% endif %}">
-                        {{ metric.value }}
+            <div class="metric-card-medium" data-aos="fade-up" data-aos-delay="200">
+                <div class="metric-header">
+                    <h3><i class="fas fa-calculator"></i> Trading Statistics</h3>
+                </div>
+                <div class="metric-content">
+                    <div class="trading-stats-grid">
+                        {% for metric in results.metrics['Trading Statistics'] %}
+                        <div class="stat-box">
+                            <div class="stat-icon">
+                                <i class="fas fa-{{ 'arrow-up' if 'win' in metric.title.lower() else 'arrow-down' if 'loss' in metric.title.lower() else 'chart-bar' }}"></i>
+                            </div>
+                            <div class="stat-info">
+                                <div class="stat-label">{{ metric.title }}</div>
+                                <div class="stat-value {% if metric.color %}{{ metric.color }}{% endif %}">
+                                    {{ metric.value }}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
                     </div>
                 </div>
-                {% endfor %}
             </div>
         </div>
 
@@ -483,108 +694,6 @@
     {% endfor %}
 
     <script>
-        // Initialize AG Grid for all symbol trade tables
-        $(document).ready(function() {
-            const gridOptions = {
-                defaultColDef: {
-                    sortable: true,
-                    filter: true,
-                    resizable: true,
-                    minWidth: 100,
-                },
-                columnDefs: [
-                    { 
-                        field: 'timestamp',
-                        headerName: 'Date',
-                        sort: 'desc',
-                        minWidth: 160
-                    },
-                    { 
-                        field: 'type',
-                        headerName: 'Type',
-                        cellRenderer: params => {
-                            const type = params.value.toUpperCase();
-                            return `<span class="badge ${type === 'BUY' ? 'badge-buy' : 'badge-sell'}">${type}</span>`;
-                        },
-                        minWidth: 120,
-                        filter: 'agSetColumnFilter'
-                    },
-                    { 
-                        field: 'price',
-                        headerName: 'Price',
-                        valueFormatter: params => `$${params.value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,
-                        type: 'numericColumn'
-                    },
-                    { 
-                        field: 'quantity',
-                        headerName: 'Quantity',
-                        type: 'numericColumn'
-                    },
-                    { 
-                        field: 'cost',
-                        headerName: 'Cost',
-                        valueFormatter: params => `$${params.value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,
-                        type: 'numericColumn'
-                    },
-                    { 
-                        field: 'commission',
-                        headerName: 'Commission',
-                        valueFormatter: params => `$${params.value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,
-                        type: 'numericColumn'
-                    },
-                    { 
-                        field: 'pnl',
-                        headerName: 'P&L',
-                        cellRenderer: params => {
-                            const value = params.value;
-                            const formatted = `$${Math.abs(value).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-                            return `<span class="${value >= 0 ? 'positive' : 'negative'}">${formatted}</span>`;
-                        },
-                        type: 'numericColumn'
-                    }
-                ],
-                pagination: true,
-                paginationPageSize: 25,
-                rowHeight: 48,
-                headerHeight: 48,
-                animateRows: true,
-                enableCellTextSelection: true,
-                suppressDragLeaveHidesColumns: true,
-                rowClass: 'trade-row'
-            };
-
-            // Add custom CSS for AG Grid styling
-            const style = document.createElement('style');
-            style.textContent = `
-                .ag-theme-alpine {
-                    --ag-font-family: 'Inter', sans-serif;
-                    --ag-font-size: 14px;
-                    --ag-header-background-color: #f8f9fa;
-                    --ag-odd-row-background-color: #ffffff;
-                    --ag-row-hover-color: #f8f9fa;
-                    --ag-selected-row-background-color: #e9ecef;
-                    --ag-header-column-separator-display: none;
-                    --ag-borders: none;
-                }
-                
-                .trade-row {
-                    border-bottom: 1px solid #f0f0f0;
-                }
-                
-                .ag-header-cell {
-                    font-weight: 600;
-                }
-            `;
-            document.head.appendChild(style);
-
-            // Initialize grids for each symbol
-            {% for symbol in symbol_results.keys() %}
-                const gridDiv = document.querySelector(`#tradesGrid-{{ symbol }}`);
-                const gridInstance = new agGrid.Grid(gridDiv, gridOptions);
-                gridInstance.gridOptions.api.setRowData({{ symbol_results[symbol].trades|tojson }});
-            {% endfor %}
-        });
-
         // Enhanced Highcharts theme
         Highcharts.setOptions({
             chart: {
@@ -626,225 +735,224 @@
             }
         });
 
-        // Correlation Matrix Heatmap
-        Highcharts.chart('correlationMatrix', {
-            chart: {
-                type: 'heatmap',
-                marginTop: 40,
-                marginBottom: 80,
-                plotBorderWidth: 1
-            },
-            title: {
-                text: 'Symbol Correlation Matrix'
-            },
-            xAxis: {
-                categories: {{ correlation_symbols|tojson }},
-                labels: {
-                    style: {
-                        fontSize: '12px'
+        // Initialize correlation matrix
+        $(document).ready(function() {
+            Highcharts.chart('correlationMatrix', {
+                chart: {
+                    type: 'heatmap',
+                    height: 400
+                },
+                title: { text: null },
+                xAxis: {
+                    categories: {{ correlation_symbols|tojson }},
+                    labels: { rotation: -45 }
+                },
+                yAxis: {
+                    categories: {{ correlation_symbols|tojson }},
+                    title: null
+                },
+                colorAxis: {
+                    min: -1,
+                    max: 1,
+                    stops: [
+                        [0, '#ff1744'],    // Red for negative correlation
+                        [0.5, '#f8f9fa'],  // Light gray for no correlation
+                        [1, '#00c853']     // Green for positive correlation
+                    ]
+                },
+                series: [{
+                    name: 'Correlation',
+                    data: {{ correlation_data|tojson }},
+                    dataLabels: {
+                        enabled: true,
+                        color: '#2c3e50',
+                        format: '{point.value:.2f}'
                     }
-                }
-            },
-            yAxis: {
-                categories: {{ correlation_symbols|tojson }},
-                title: null,
-                labels: {
-                    style: {
-                        fontSize: '12px'
-                    }
-                }
-            },
-            colorAxis: {
-                min: -1,
-                max: 1,
-                stops: [
-                    [0, '#ff5f5f'],     // Red for negative correlation
-                    [0.5, '#ffffff'],   // White for no correlation
-                    [1, '#50B432']      // Green for positive correlation
-                ]
-            },
-            legend: {
-                align: 'right',
-                layout: 'vertical',
-                margin: 0,
-                verticalAlign: 'top',
-                y: 25,
-                symbolHeight: 280
-            },
-            series: [{
-                name: 'Correlation',
-                data: {{ correlation_data|tojson }},
-                dataLabels: {
-                    enabled: true,
-                    color: '#000000',
-                    style: {
-                        fontSize: '11px'
+                }]
+            });
+
+            // Initialize symbol-specific charts
+            {% for symbol, results in symbol_results.items() %}
+                // Equity Curve
+                Highcharts.chart('equity-{{ symbol }}', {
+                    chart: { type: 'area' },
+                    title: { text: '{{ symbol }} Equity Curve' },
+                    xAxis: { type: 'datetime' },
+                    yAxis: { 
+                        title: { text: 'Value ($)' },
+                        labels: { formatter: function() { return '$' + this.value.toLocaleString(); } }
                     },
-                    format: '{point.value:.2f}'
-                }
-            }]
-        });
-
-        // Individual Symbol Charts
-        {% for symbol, results in symbol_results.items() %}
-            // Equity Curve
-            Highcharts.chart('equity-{{ symbol }}', {
-                chart: { type: 'area' },
-                title: { text: '{{ symbol }} Equity Curve' },
-                xAxis: { type: 'datetime' },
-                yAxis: { 
-                    title: { text: 'Value ($)' },
-                    labels: { formatter: function() { return '$' + this.value.toLocaleString(); } }
-                },
-                series: [{
-                    name: 'Equity',
-                    data: {{ results.equity_curve|tojson }},
-                    color: '#3498db',
-                    fillColor: {
-                        linearGradient: {
-                            x1: 0, y1: 0, x2: 0, y2: 1
-                        },
-                        stops: [
-                            [0, Highcharts.color('#3498db').setOpacity(0.3).get('rgba')],
-                            [1, Highcharts.color('#3498db').setOpacity(0).get('rgba')]
-                        ]
-                    }
-                }],
-                tooltip: {
-                    valuePrefix: '$',
-                    valueDecimals: 2
-                }
-            });
-
-            // Drawdown Chart
-            Highcharts.chart('drawdown-{{ symbol }}', {
-                chart: { type: 'area' },
-                title: { text: '{{ symbol }} Drawdown' },
-                xAxis: { type: 'datetime' },
-                yAxis: {
-                    title: { text: 'Drawdown (%)' },
-                    labels: { format: '{value}%' }
-                },
-                series: [{
-                    name: 'Drawdown',
-                    data: {{ results.drawdown|tojson }},
-                    color: '#e74c3c',
-                    fillColor: {
-                        linearGradient: {
-                            x1: 0, y1: 0, x2: 0, y2: 1
-                        },
-                        stops: [
-                            [0, Highcharts.color('#e74c3c').setOpacity(0.3).get('rgba')],
-                            [1, Highcharts.color('#e74c3c').setOpacity(0).get('rgba')]
-                        ]
-                    }
-                }],
-                tooltip: {
-                    valueSuffix: '%',
-                    valueDecimals: 2
-                }
-            });
-
-            // Monthly Returns
-            Highcharts.chart('monthly-returns-{{ symbol }}', {
-                chart: { type: 'column' },
-                title: { text: '{{ symbol }} Monthly Returns' },
-                xAxis: { type: 'datetime' },
-                yAxis: {
-                    title: { text: 'Return (%)' },
-                    labels: { format: '{value}%' }
-                },
-                series: [{
-                    name: 'Monthly Return',
-                    data: {{ results.monthly_returns|tojson }},
-                    color: '#2ecc71',
-                    negativeColor: '#e74c3c'
-                }],
-                tooltip: {
-                    valueSuffix: '%',
-                    valueDecimals: 2
-                }
-            });
-
-            // Price Chart with Trade Points
-            Highcharts.stockChart('price-{{ symbol }}', {
-                chart: { 
-                    type: 'line',
-                    style: { fontFamily: 'Inter, sans-serif' }
-                },
-                title: { text: '{{ symbol }} Price Chart with Trades' },
-                yAxis: { 
-                    title: { text: 'Price ($)' },
-                    labels: { formatter: function() { return '$' + this.value.toLocaleString(); } }
-                },
-                series: [{
-                    name: 'Price',
-                    data: {{ results.price_data|tojson }},
-                    color: '#2c3e50',
-                    lineWidth: 2,
-                    id: 'price'
-                }, {
-                    type: 'scatter',
-                    name: 'Trade Points',
-                    data: {{ results.trade_annotations|tojson|safe }}.map(function(point) {
-                        return {
-                            x: point.x,
-                            y: point.y,
-                            marker: {
-                                symbol: point.title === '↑' ? 'triangle' : 'triangle-down',
-                                fillColor: point.title === '↑' ? '#00c853' : '#ff1744',
-                                lineColor: point.title === '↑' ? '#00c853' : '#ff1744',
-                                lineWidth: 1,
-                                radius: 8
+                    series: [{
+                        name: 'Equity',
+                        data: {{ results.equity_curve|tojson }},
+                        color: '#3498db',
+                        fillColor: {
+                            linearGradient: {
+                                x1: 0, y1: 0, x2: 0, y2: 1
                             },
-                            tooltip: {
-                                pointFormat: point.text
-                            }
-                        };
-                    }),
-                    tooltip: {
-                        pointFormat: '{point.tooltip}'
-                    }
-                }],
-                tooltip: {
-                    shared: true,
-                    split: false,
-                    valuePrefix: '$',
-                    valueDecimals: 2
-                },
-                rangeSelector: {
-                    enabled: true,
-                    buttons: [{
-                        type: 'day',
-                        count: 7,
-                        text: '1w'
-                    }, {
-                        type: 'month',
-                        count: 1,
-                        text: '1m'
-                    }, {
-                        type: 'month',
-                        count: 3,
-                        text: '3m'
-                    }, {
-                        type: 'month',
-                        count: 6,
-                        text: '6m'
-                    }, {
-                        type: 'year',
-                        count: 1,
-                        text: '1y'
-                    }, {
-                        type: 'all',
-                        text: 'All'
+                            stops: [
+                                [0, Highcharts.color('#3498db').setOpacity(0.3).get('rgba')],
+                                [1, Highcharts.color('#3498db').setOpacity(0).get('rgba')]
+                            ]
+                        }
                     }],
-                    selected: 4
-                },
-                navigator: {
-                    enabled: true
-                }
-            });
-        {% endfor %}
+                    tooltip: {
+                        valuePrefix: '$',
+                        valueDecimals: 2
+                    }
+                });
+
+
+                // Drawdown Chart
+                Highcharts.chart('drawdown-{{ symbol }}', {
+                    chart: { type: 'area' },
+                    title: { text: '{{ symbol }} Drawdown' },
+                    xAxis: { type: 'datetime' },
+                    yAxis: {
+                        title: { text: 'Drawdown (%)' },
+                        labels: { format: '{value}%' }
+                    },
+                    series: [{
+                        name: 'Drawdown',
+                        data: {{ results.drawdown|tojson }},
+                        color: '#e74c3c',
+                        fillColor: {
+                            linearGradient: {
+                                x1: 0, y1: 0, x2: 0, y2: 1
+                            },
+                            stops: [
+                                [0, Highcharts.color('#e74c3c').setOpacity(0.3).get('rgba')],
+                                [1, Highcharts.color('#e74c3c').setOpacity(0).get('rgba')]
+                            ]
+                        }
+                    }],
+                    tooltip: {
+                        valueSuffix: '%',
+                        valueDecimals: 2
+                    }
+                });
+
+                // Monthly Returns
+                Highcharts.chart('monthly-returns-{{ symbol }}', {
+                    chart: { type: 'column' },
+                    title: { text: '{{ symbol }} Monthly Returns' },
+                    xAxis: { type: 'datetime' },
+                    yAxis: {
+                        title: { text: 'Return (%)' },
+                        labels: { format: '{value}%' }
+                    },
+                    series: [{
+                        name: 'Monthly Return',
+                        data: {{ results.monthly_returns|tojson }},
+                        color: '#2ecc71',
+                        negativeColor: '#e74c3c'
+                    }],
+                    tooltip: {
+                        valueSuffix: '%',
+                        valueDecimals: 2
+                    }
+                });
+
+
+                // Price Chart with Trade Points
+                Highcharts.stockChart('price-{{ symbol }}', {
+                    chart: { 
+                        type: 'line',
+                        style: { fontFamily: 'Inter, sans-serif' }
+                    },
+                    title: { text: '{{ symbol }} Price Chart with Trades' },
+                    yAxis: { 
+                        title: { text: 'Price ($)' },
+                        labels: { formatter: function() { return '$' + this.value.toLocaleString(); } }
+                    },
+                    series: [{
+                        name: 'Price',
+                        data: {{ results.price_data|tojson }},
+                        color: '#2c3e50',
+                        lineWidth: 2,
+                        id: 'price'
+                    }, {
+                        type: 'scatter',
+                        name: 'Trade Points',
+                        data: {{ results.trade_annotations|tojson|safe }}.map(function(point) {
+                            return {
+                                x: point.x,
+                                y: point.y,
+                                marker: {
+                                    symbol: point.title === '↑' ? 'triangle' : 'triangle-down',
+                                    fillColor: point.title === '↑' ? '#00c853' : '#ff1744',
+                                    lineColor: point.title === '↑' ? '#00c853' : '#ff1744',
+                                    lineWidth: 1,
+                                    radius: 8
+                                },
+                                tooltip: {
+                                    pointFormat: point.text
+                                }
+                            };
+                        }),
+                        tooltip: {
+                            pointFormat: '{point.tooltip}'
+                        }
+                    }],
+                    tooltip: {
+                        shared: true,
+                        split: false,
+                        valuePrefix: '$',
+                        valueDecimals: 2
+                    },
+                    rangeSelector: {
+                        enabled: true,
+                        buttons: [{
+                            type: 'day',
+                            count: 7,
+                            text: '1w'
+                        }, {
+                            type: 'month',
+                            count: 1,
+                            text: '1m'
+                        }, {
+                            type: 'month',
+                            count: 3,
+                            text: '3m'
+                        }, {
+                            type: 'month',
+                            count: 6,
+                            text: '6m'
+                        }, {
+                            type: 'year',
+                            count: 1,
+                            text: '1y'
+                        }, {
+                            type: 'all',
+                            text: 'All'
+                        }],
+                        selected: 4
+                    },
+                    navigator: {
+                        enabled: true
+                    }
+                });
+
+                // Initialize Trades Grid
+                new agGrid.Grid(document.querySelector('#tradesGrid-{{ symbol }}'), {
+                    columnDefs: [
+                        { field: 'timestamp', headerName: 'Date/Time', sort: 'desc' },
+                        { field: 'type', headerName: 'Type' },
+                        { field: 'price', headerName: 'Price', valueFormatter: params => '$' + params.value.toLocaleString() },
+                        { field: 'quantity', headerName: 'Quantity' },
+                        { field: 'cost', headerName: 'Cost', valueFormatter: params => '$' + Math.abs(params.value).toLocaleString() },
+                        { field: 'commission', headerName: 'Commission', valueFormatter: params => '$' + params.value.toLocaleString() },
+                        { field: 'pnl', headerName: 'P&L', valueFormatter: params => '$' + params.value.toLocaleString() }
+                    ],
+                    rowData: {{ results.trades|tojson }},
+                    defaultColDef: {
+                        sortable: true,
+                        filter: true,
+                        resizable: true
+                    }
+                });
+            {% endfor %}
+        });
 
         // Initialize AOS
         AOS.init({
@@ -854,5 +962,4 @@
         });
     </script>
 </body>
-</html> 
 </html> 
