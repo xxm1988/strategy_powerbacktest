@@ -200,8 +200,8 @@ class MultiSymbolBacktestReport:
                         {'title': 'Average Loss', 'value': trade_metrics['Average Loss'], 'color': 'negative'},
                         {'title': 'Largest Win', 'value': trade_metrics['Largest Win'], 'color': 'positive'},
                         {'title': 'Largest Loss', 'value': trade_metrics['Largest Loss'], 'color': 'negative'},
-                        {'title': 'Max Consecutive Wins', 'value': trade_metrics['Max Consecutive Wins']},
-                        {'title': 'Max Consecutive Losses', 'value': trade_metrics['Max Consecutive Losses']}
+                        {'title': 'Max Consec. Wins', 'value': trade_metrics['Max Consecutive Wins']},
+                        # {'title': 'Max Consecutive Losses', 'value': trade_metrics['Max Consecutive Losses']}
                     ]
                 },
                 'total_return': float(perf_metrics['Total Return'].strip('%')),

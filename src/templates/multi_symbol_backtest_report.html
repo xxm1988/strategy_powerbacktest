@@ -35,6 +35,9 @@
     <link href="https://cdn.jsdelivr.net/npm/nouislider@14.6.3/distribute/nouislider.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/nouislider@14.6.3/distribute/nouislider.min.js"></script>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -1177,7 +1180,7 @@
                                 <h2 class="page-title d-flex align-items-center">
                                     {{ symbol }}
                                     <span class="badge ms-3 {% if results.total_return >= 0 %}badge-success{% else %}badge-danger{% endif %}">
-                                        {{ "{:.2f}%".format(results.total_return * 100) }}
+                                        {{ "{:.2f}%".format(results.total_return) }}
                                     </span>
                                 </h2>
                             </div>
@@ -1226,6 +1229,17 @@
                                         </div>
                                     </div>
                                     {% endfor %}
+                                </div>
+                                <!-- Risk Metrics Radar -->
+                                <div class="chart-card" data-aos="fade-up">
+                                    <div class="card-header">
+                                        <h3>
+                                            <i class="ti ti-radar"></i> {{ symbol }} Risk Metrics Analysis
+                                        </h3>
+                                    </div>
+                                    <div class="chart-container">
+                                        <canvas id="riskRadar-{{ symbol|replace('.', '-') }}" height="400"></canvas>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1647,6 +1661,11 @@
                 });
             });
 
+                // Initialize Risk Radar Charts
+            {% for symbol, results in symbol_results.items() %}
+                initializeRiskRadar('{{ symbol }}', {{ results.metrics|tojson }});
+            {% endfor %}
+
             // Initialize Select2
             $('.symbol-selector').select2({
                 theme: 'default',
@@ -1793,6 +1812,77 @@
 
             // Trigger resize event for charts
             window.dispatchEvent(new Event('resize'));
+        }
+
+        function initializeRiskRadar(symbol, metrics) {
+            const ctx = document.getElementById(`riskRadar-${symbol.replace('.', '-')}`).getContext('2d');
+            
+            // Helper function to find metric value by title
+            function getMetricValue(metricGroup, titlePattern) {
+                const metric = metrics[metricGroup].find(m => m.title.toLowerCase().includes(titlePattern.toLowerCase()));
+                return metric ? parseFloat(metric.value) : 0;
+            }
+
+            const data = {
+                labels: [
+                    'Sharpe Ratio',
+                    'Sortino Ratio',
+                    'Max Drawdown',
+                    'Win Rate',
+                    'Profit Factor',
+                    'Recovery Factor'
+                ],
+                datasets: [{
+                    label: symbol,
+                    data: [
+                        getMetricValue('Risk Metrics', 'Sharpe'),
+                        getMetricValue('Risk Metrics', 'Sortino'),
+                        getMetricValue('Risk Metrics', 'Max Drawdown') * -1,
+                        getMetricValue('Trading Statistics', 'Win Rate'),
+                        getMetricValue('Trading Statistics', 'Profit Factor'),
+                        getMetricValue('Risk Metrics', 'Recovery')
+                    ],
+                    fill: true,
+                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                    borderColor: 'rgb(59, 130, 246)',
+                    pointBackgroundColor: 'rgb(59, 130, 246)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgb(59, 130, 246)'
+                }]
+            };
+
+            new Chart(ctx, {
+                type: 'radar',
+                data: data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: { color: 'rgba(0, 0, 0, 0.1)' },
+                            grid: { color: 'rgba(0, 0, 0, 0.1)' },
+                            pointLabels: {
+                                font: { size: 12, family: 'Inter' }
+                            },
+                            ticks: {
+                                backdropColor: 'transparent',
+                                font: { size: 10 }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.raw.toFixed(2)}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
         }
     </script>
 </body>
