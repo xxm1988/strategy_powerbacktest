@@ -21,19 +21,47 @@ class MultiSymbolBacktestReport:
 
     def _calculate_portfolio_metrics(self) -> Dict[str, float]:
         """Calculate aggregated portfolio metrics"""
-        total_returns = [float(results.metrics['Performance Metrics'][0]['value'].strip('$').replace(',', '')) 
-                         for results in self.symbol_results.values()]
-                         
-        sharpe_ratios = [float(results.metrics['Risk Metrics'][0]['value'].strip('%'))
-                         for results in self.symbol_results.values()]
-                         
-        drawdowns = [int(results.metrics['Risk Metrics'][1]['value'].split()[0])
-                     for results in self.symbol_results.values()]
-        
+        # Convert total returns from percentage strings to floats
+        total_returns = []
+        for results in self.symbol_results.values():
+            try:
+                # Extract total return value and convert from percentage string
+                return_str = results.metrics['Performance Metrics'][1]['value'].strip('%')  # Using Total Return metric
+                total_return = float(return_str) / 100  # Convert percentage to decimal
+                total_returns.append(total_return)
+            except (ValueError, KeyError, IndexError) as e:
+                logging.warning(f"Error processing total return: {e}")
+                continue
+
+        # Calculate Sharpe ratios
+        sharpe_ratios = []
+        for results in self.symbol_results.values():
+            try:
+                sharpe_str = results.metrics['Performance Metrics'][3]['value']  # Using Sharpe Ratio metric
+                sharpe_ratios.append(float(sharpe_str))
+            except (ValueError, KeyError, IndexError) as e:
+                logging.warning(f"Error processing Sharpe ratio: {e}")
+                continue
+
+        # Calculate drawdowns
+        drawdowns = []
+        for results in self.symbol_results.values():
+            try:
+                drawdown_str = results.metrics['Risk Metrics'][0]['value'].strip('%')  # Using Max Drawdown metric
+                drawdowns.append(float(drawdown_str))
+            except (ValueError, KeyError, IndexError) as e:
+                logging.warning(f"Error processing drawdown: {e}")
+                continue
+
+        # Calculate portfolio-level metrics
+        avg_total_return = np.mean(total_returns) if total_returns else 0
+        avg_sharpe_ratio = np.mean(sharpe_ratios) if sharpe_ratios else 0
+        max_drawdown = min(drawdowns) if drawdowns else 0
+
         return {
-            'total_return': np.mean(total_returns),
-            'sharpe_ratio': np.mean(sharpe_ratios),
-            'max_drawdown': min(drawdowns),
+            'total_return': avg_total_return * 100,  # Convert back to percentage
+            'sharpe_ratio': avg_sharpe_ratio,
+            'max_drawdown': max_drawdown,
             'correlation_matrix': self._calculate_correlation_matrix()
         }
 
@@ -120,12 +148,12 @@ class MultiSymbolBacktestReport:
         # Format metrics for display with proper extraction
         overall_metrics = [
             {'title': 'Total Return', 
-             'value': f"{float(portfolio_metrics['total_return']):.2f}%",
+             'value': f"{portfolio_metrics['total_return']:.2f}%",
              'color': 'positive' if portfolio_metrics['total_return'] > 0 else 'negative'},
             {'title': 'Sharpe Ratio', 
-             'value': f"{float(portfolio_metrics['sharpe_ratio']):.2f}"},
+             'value': f"{portfolio_metrics['sharpe_ratio']:.2f}"},
             {'title': 'Max Drawdown', 
-             'value': f"{float(portfolio_metrics['max_drawdown']):.2f}%",
+             'value': f"{portfolio_metrics['max_drawdown']:.2f}%",
              'color': 'negative'}
         ]
 
