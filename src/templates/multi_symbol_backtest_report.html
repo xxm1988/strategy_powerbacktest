@@ -8,6 +8,11 @@
     <script src="https://code.highcharts.com/modules/heatmap.js"></script>
     <script src="https://code.highcharts.com/modules/accessibility.js"></script>
 
+    <!-- Tabler UI Core -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@latest/dist/css/tabler.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/@tabler/core@latest/dist/js/tabler.min.js"></script>
+
     <!-- Styling -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -137,8 +142,8 @@
         .symbol-section {
             background: white;
             border-radius: 1.5rem;
-            padding: 2.5rem;
-            margin-bottom: 3rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
             box-shadow: 0 4px 15px rgba(0,0,0,0.05);
         }
 
@@ -643,6 +648,56 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* Add to your existing styles */
+        .nav-tabs .nav-link {
+            color: #1e293b;
+            border: none;
+            padding: 1rem 1.5rem;
+        }
+
+        .nav-tabs .nav-link.active {
+            color: #206bc4;
+            border-bottom: 2px solid #206bc4;
+            background: transparent;
+        }
+
+        .nav-tabs .nav-link:hover:not(.active) {
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .card {
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .badge {
+            padding: 0.25rem 0.75rem;
+        }
+
+        .bg-green {
+            background: #2fb344;
+        }
+
+        .bg-red {
+            background: #d63939;
+        }
+
+        .page-body {
+            padding: 2rem 0;
+        }
+
+        .container-xl {
+            max-width: 1320px;
+            margin: 0 auto;
+            padding-left: 1.5rem;
+            padding-right: 1.5rem;
+        }
+
+        .symbol-header {
+            border-bottom: 1px solid #e9ecef;
+            padding-bottom: 1.5rem;
+        }
     </style>
 </head>
 <body>
@@ -723,125 +778,134 @@
                 </div>
 
                 <!-- Symbol-specific Sections -->
-                {% for symbol, results in symbol_results.items() %}
-                <div class="symbol-section" id="symbol-{{ symbol }}">
-                    <div class="symbol-header">
-                        <h2 class="symbol-title">{{ symbol }} Analysis</h2>
-                        <div class="symbol-metrics">
-                            <span class="badge {% if results.total_return >= 0 %}badge-success{% else %}badge-danger{% endif %}">
-                                {{ "{:.2f}%".format(results.total_return * 100) }}
-                            </span>
-                        </div>
-                    </div>
-
-                    <!-- Metrics Dashboard -->
-                    <div class="metrics-dashboard">
-                        <!-- Performance Overview -->
-                        <div class="metric-card-large" data-aos="fade-up">
-                            <div class="metric-header">
-                                <h3><i class="fas fa-chart-line"></i> Performance Overview</h3>
+                <div class="page-body">
+                    <div class="container-xl">
+                        {% for symbol, results in symbol_results.items() %}
+                        <div class="symbol-section" id="symbol-{{ symbol }}">
+                            <div class="symbol-header mb-4">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <div class="page-pretitle">Symbol Analysis</div>
+                                        <h2 class="page-title d-flex align-items-center">
+                                            {{ symbol }}
+                                            <span class="badge ms-3 {% if results.total_return >= 0 %}badge-success{% else %}badge-danger{% endif %}">
+                                                {{ "{:.2f}%".format(results.total_return * 100) }}
+                                            </span>
+                                        </h2>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="metric-content">
-                                <div class="trading-stats-grid">
-                                    {% for metric in results.metrics['Performance Metrics'] %}
-                                    <div class="stat-box">
-                                        <div class="stat-icon">
-                                            <i class="fas fa-{{ 'arrow-trend-up' if 'return' in metric.title.lower() else 'chart-line' if 'alpha' in metric.title.lower() or 'beta' in metric.title.lower() else 'calculator' }}"></i>
-                                        </div>
-                                        <div class="stat-info">
-                                            <div class="stat-label">{{ metric.title }}</div>
-                                            <div class="stat-value {% if metric.color %}{{ metric.color }}{% endif %}">
-                                                {{ metric.value }}
+
+                            <!-- Metrics Dashboard -->
+                            <div class="metrics-dashboard">
+                                <!-- Performance Overview -->
+                                <div class="metric-card-large" data-aos="fade-up">
+                                    <div class="metric-header">
+                                        <h3><i class="fas fa-chart-line"></i> Performance Overview</h3>
+                                    </div>
+                                    <div class="metric-content">
+                                        <div class="trading-stats-grid">
+                                            {% for metric in results.metrics['Performance Metrics'] %}
+                                            <div class="stat-box">
+                                                <div class="stat-icon">
+                                                    <i class="fas fa-{{ 'arrow-trend-up' if 'return' in metric.title.lower() else 'chart-line' if 'alpha' in metric.title.lower() or 'beta' in metric.title.lower() else 'calculator' }}"></i>
+                                                </div>
+                                                <div class="stat-info">
+                                                    <div class="stat-label">{{ metric.title }}</div>
+                                                    <div class="stat-value {% if metric.color %}{{ metric.color }}{% endif %}">
+                                                        {{ metric.value }}
+                                                    </div>
+                                                </div>
                                             </div>
+                                            {% endfor %}
                                         </div>
                                     </div>
-                                    {% endfor %}
                                 </div>
-                            </div>
-                        </div>
 
-                        <!-- Risk Analysis -->
-                        <div class="metric-card-medium" data-aos="fade-up" data-aos-delay="100">
-                            <div class="metric-header">
-                                <h3><i class="fas fa-shield-alt"></i> Risk Analysis</h3>
-                            </div>
-                            <div class="metric-content">
-                                <div class="trading-stats-grid">
-                                    {% for metric in results.metrics['Risk Metrics'] %}
-                                    <div class="stat-box">
-                                        <div class="stat-icon">
-                                            <i class="fas fa-{{ 'chart-area' if 'drawdown' in metric.title.lower() else 'chart-line' if 'volatility' in metric.title.lower() else 'shield' }}"></i>
-                                        </div>
-                                        <div class="stat-info">
-                                            <div class="stat-label">{{ metric.title }}</div>
-                                            <div class="stat-value {% if metric.color %}{{ metric.color }}{% endif %}">
-                                                {{ metric.value }}
+                                <!-- Risk Analysis -->
+                                <div class="metric-card-medium" data-aos="fade-up" data-aos-delay="100">
+                                    <div class="metric-header">
+                                        <h3><i class="fas fa-shield-alt"></i> Risk Analysis</h3>
+                                    </div>
+                                    <div class="metric-content">
+                                        <div class="trading-stats-grid">
+                                            {% for metric in results.metrics['Risk Metrics'] %}
+                                            <div class="stat-box">
+                                                <div class="stat-icon">
+                                                    <i class="fas fa-{{ 'chart-area' if 'drawdown' in metric.title.lower() else 'chart-line' if 'volatility' in metric.title.lower() else 'shield' }}"></i>
+                                                </div>
+                                                <div class="stat-info">
+                                                    <div class="stat-label">{{ metric.title }}</div>
+                                                    <div class="stat-value {% if metric.color %}{{ metric.color }}{% endif %}">
+                                                        {{ metric.value }}
+                                                    </div>
+                                                </div>
                                             </div>
+                                            {% endfor %}
                                         </div>
                                     </div>
-                                    {% endfor %}
                                 </div>
-                            </div>
-                        </div>
 
-                        <!-- Trading Statistics -->
-                        <div class="metric-card-medium" data-aos="fade-up" data-aos-delay="200">
-                            <div class="metric-header">
-                                <h3><i class="fas fa-calculator"></i> Trading Statistics</h3>
-                            </div>
-                            <div class="metric-content">
-                                <div class="trading-stats-grid">
-                                    {% for metric in results.metrics['Trading Statistics'] %}
-                                    <div class="stat-box">
-                                        <div class="stat-icon">
-                                            <i class="fas fa-{{ 'arrow-up' if 'win' in metric.title.lower() else 'arrow-down' if 'loss' in metric.title.lower() else 'chart-bar' }}"></i>
-                                        </div>
-                                        <div class="stat-info">
-                                            <div class="stat-label">{{ metric.title }}</div>
-                                            <div class="stat-value {% if metric.color %}{{ metric.color }}{% endif %}">
-                                                {{ metric.value }}
+                                <!-- Trading Statistics -->
+                                <div class="metric-card-medium" data-aos="fade-up" data-aos-delay="200">
+                                    <div class="metric-header">
+                                        <h3><i class="fas fa-calculator"></i> Trading Statistics</h3>
+                                    </div>
+                                    <div class="metric-content">
+                                        <div class="trading-stats-grid">
+                                            {% for metric in results.metrics['Trading Statistics'] %}
+                                            <div class="stat-box">
+                                                <div class="stat-icon">
+                                                    <i class="fas fa-{{ 'arrow-up' if 'win' in metric.title.lower() else 'arrow-down' if 'loss' in metric.title.lower() else 'chart-bar' }}"></i>
+                                                </div>
+                                                <div class="stat-info">
+                                                    <div class="stat-label">{{ metric.title }}</div>
+                                                    <div class="stat-value {% if metric.color %}{{ metric.color }}{% endif %}">
+                                                        {{ metric.value }}
+                                                    </div>
+                                                </div>
                                             </div>
+                                            {% endfor %}
                                         </div>
                                     </div>
-                                    {% endfor %}
                                 </div>
                             </div>
-                        </div>
-                    </div>
 
-                    <!-- Charts Section -->
-                    <div class="charts-grid">
-                        <div class="chart-container" data-aos="fade-up">
-                            <div id="equity-{{ symbol|replace('.', '-') }}" style="height: 400px;"></div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="chart-container" data-aos="fade-up" data-aos-delay="100">
-                                    <div id="drawdown-{{ symbol|replace('.', '-') }}" style="height: 300px;"></div>
+                            <!-- Charts Section -->
+                            <div class="charts-grid">
+                                <div class="chart-container" data-aos="fade-up">
+                                    <div id="equity-{{ symbol|replace('.', '-') }}" style="height: 400px;"></div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="chart-container" data-aos="fade-up" data-aos-delay="100">
+                                            <div id="drawdown-{{ symbol|replace('.', '-') }}" style="height: 300px;"></div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="chart-container" data-aos="fade-up" data-aos-delay="200">
+                                            <div id="monthly-returns-{{ symbol|replace('.', '-') }}" style="height: 300px;"></div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="chart-container" data-aos="fade-up" data-aos-delay="200">
-                                    <div id="monthly-returns-{{ symbol|replace('.', '-') }}" style="height: 300px;"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
-                    <!-- Trade Analysis Section -->
-                    <div class="section mb-5">
-                        <h3><i class="fas fa-exchange-alt"></i>Trade History</h3>
-                        <!-- Price Chart with Trade Points -->
-                        <div class="chart-container">
-                            <div id="price-{{ symbol|replace('.', '-') }}" style="height: 400px;"></div>
+                            <!-- Trade Analysis Section -->
+                            <div class="section mb-5">
+                                <h3><i class="fas fa-exchange-alt"></i>Trade History</h3>
+                                <!-- Price Chart with Trade Points -->
+                                <div class="chart-container">
+                                    <div id="price-{{ symbol|replace('.', '-') }}" style="height: 400px;"></div>
+                                </div>
+                                <!-- Trades Table -->
+                                <div class="trades-table">
+                                    <div id="tradesGrid-{{ symbol|replace('.', '-') }}" class="ag-theme-alpine" style="height: 500px; width: 100%;"></div>
+                                </div>
+                            </div>
                         </div>
-                        <!-- Trades Table -->
-                        <div class="trades-table">
-                            <div id="tradesGrid-{{ symbol|replace('.', '-') }}" class="ag-theme-alpine" style="height: 500px; width: 100%;"></div>
-                        </div>
+                        {% endfor %}
                     </div>
                 </div>
-                {% endfor %}
             </div>
         </div>
     </div>
@@ -1177,6 +1241,30 @@
             duration: 800,
             once: true,
             offset: 100
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize Tabler UI
+            window.tabler = {
+                colors: {
+                    blue: '#206bc4',
+                    green: '#2fb344',
+                    red: '#d63939',
+                }
+            };
+
+            // Handle lazy loading of charts
+            const tabEls = document.querySelectorAll('a[data-bs-toggle="tab"]');
+            tabEls.forEach(tabEl => {
+                tabEl.addEventListener('shown.bs.tab', event => {
+                    const targetId = event.target.getAttribute('href');
+                    const chartContainer = document.querySelector(`${targetId} [id^="chart-"]`);
+                    if (chartContainer && !chartContainer.hasAttribute('data-loaded')) {
+                        // Initialize chart here
+                        chartContainer.setAttribute('data-loaded', 'true');
+                    }
+                });
+            });
         });
     </script>
 </body>
