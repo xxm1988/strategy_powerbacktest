@@ -749,6 +749,304 @@
             opacity: 0.5;
             pointer-events: none;
         }
+
+        /* Enhanced Filter Styles */
+        .select2-container .select2-selection--multiple {
+            min-height: 42px;
+            border: 1px solid rgba(98, 105, 118, 0.4) !important;
+            border-radius: 8px;
+            background-color: #fff;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+        }
+
+        .select2-container .select2-selection--multiple:hover {
+            border-color: rgba(32, 107, 196, 0.4) !important;
+        }
+
+        .select2-container--default.select2-container--focus .select2-selection--multiple {
+            border-color: rgba(32, 107, 196, 0.4) !important;
+            box-shadow: 0 0 0 4px rgba(32, 107, 196, 0.4);
+        }
+
+        .select2-container--default .select2-selection--multiple .select2-selection__choice {
+            background: rgba(59, 130, 246, 0.4);
+            color: #000;
+            border: none;
+            border-radius: 6px;
+            padding: 4px 10px;
+            margin: 4px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .select2-container--default .select2-selection--multiple .select2-selection__choice:hover {
+            background: rgba(79, 70, 229, 0.4);
+        }
+
+        .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+            color: #000;
+            opacity: 0.4;
+            margin-right: 6px;
+            border: none;
+            padding: 0 4px;
+            border-radius: 4px;
+        }
+
+        .select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
+            background: rgba(0, 0, 0, 0.4);
+            color: #000;
+        }
+
+        .select2-dropdown {
+            border: 1px solid rgba(98, 105, 118, 0.4);
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+        }
+
+        .select2-container--default .select2-results__option--highlighted[aria-selected] {
+            background: rgba(59, 130, 246, 0.4);
+            color: #000;
+        }
+
+        .select2-container--default .select2-results__option[aria-selected=true] {
+            background-color: rgba(37, 99, 235, 0.4);
+            color: #000;
+        }
+
+        .select2-container--default .select2-search--inline .select2-search__field {
+            color: #000;
+            opacity: 0.8;
+        }
+
+        .active-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .filter-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            background: rgba(32, 107, 196, 0.1);
+            color: #206bc4;
+            border-radius: 100px;
+            font-size: 0.875rem;
+        }
+
+        .filter-badge .ti {
+            margin-right: 0.5rem;
+        }
+
+        .filter-badge .remove-filter {
+            margin-left: 0.5rem;
+            cursor: pointer;
+            opacity: 0.7;
+        }
+
+        .filter-badge .remove-filter:hover {
+            opacity: 1;
+        }
+
+        .input-icon {
+            position: relative;
+        }
+
+        .input-icon .input-icon-addon {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 2.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #626976;
+            z-index: 1;
+        }
+
+        .input-icon .form-select,
+        .input-icon .form-control {
+            padding-left: 2.5rem;
+        }
+
+        /* Filter Card Styles */
+        .filter-card {
+            background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+            border: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03), 0 6px 24px rgba(0, 0, 0, 0.02);
+            border-radius: 16px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            margin: 1.5rem 0;
+            backdrop-filter: blur(10px);
+        }
+
+        .filter-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05), 0 12px 28px rgba(0, 0, 0, 0.03);
+            transform: translateY(-2px);
+        }
+
+        /* Select2 Enhancements */
+        .select2-container .select2-selection--multiple {
+            min-height: 48px;
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.2) !important;
+            border-radius: 12px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+            backdrop-filter: blur(8px);
+        }
+
+        .select2-container .select2-selection--multiple:hover {
+            background: rgba(255, 255, 255, 0.95);
+            border-color: rgba(59, 130, 246, 0.4) !important;
+        }
+
+        .select2-container--default.select2-container--focus .select2-selection--multiple {
+            border-color: rgb(59, 130, 246) !important;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+            background: #ffffff;
+        }
+
+        .select2-container--default .select2-selection--multiple .select2-selection__choice {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 6px 14px;
+            margin: 4px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            letter-spacing: 0.01em;
+            box-shadow: 0 2px 4px rgba(37, 99, 235, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .select2-container--default .select2-selection--multiple .select2-selection__choice:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(37, 99, 235, 0.2);
+            background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+        }
+
+        .select2-dropdown {
+            background: rgba(255, 255, 255, 0.98);
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(15, 23, 42, 0.08);
+            backdrop-filter: blur(10px);
+            margin-top: 4px;
+            animation: dropdownFade 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .select2-container--default .select2-results__option {
+            padding: 12px 16px;
+            transition: all 0.15s ease;
+            font-size: 0.925rem;
+            color: #1e293b;
+        }
+
+        .select2-container--default .select2-results__option--highlighted[aria-selected] {
+            background: rgba(59, 130, 246, 0.08);
+            color: #2563eb;
+        }
+
+        .select2-container--default .select2-search--inline .select2-search__field {
+            font-size: 0.95rem;
+            padding: 12px 8px;
+            margin-top: 6px;
+            font-weight: 400;
+            color: #1e293b;
+        }
+
+        /* Quick Filters Select */
+        .metric-filter {
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-size: 0.95rem;
+            height: 48px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+            backdrop-filter: blur(8px);
+        }
+
+        .metric-filter:hover {
+            background: rgba(255, 255, 255, 0.95);
+            border-color: rgba(59, 130, 246, 0.4);
+        }
+
+        .metric-filter:focus {
+            border-color: rgb(59, 130, 246);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+            background: #ffffff;
+        }
+
+        /* Active Filters */
+        .active-filters .badge {
+            background: rgba(59, 130, 246, 0.1);
+            color: #2563eb;
+            border: 1px solid rgba(59, 130, 246, 0.1);
+            padding: 8px 16px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .active-filters .badge:hover {
+            background: rgba(59, 130, 246, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .active-filters .badge i {
+            font-size: 1.1rem;
+            opacity: 0.8;
+        }
+
+        @keyframes dropdownFade {
+            from {
+                opacity: 0;
+                transform: translateY(-8px) scale(0.98);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* Form Labels */
+        .form-label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #64748b;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-label i {
+            font-size: 1.1rem;
+            opacity: 0.8;
+        }
+
+        @keyframes dropdownFade {
+            from {
+                opacity: 0;
+                transform: translateY(-8px) scale(0.98);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
     </style>
 </head>
 <body>
@@ -783,46 +1081,7 @@
                 </div>
             </div>
         </div>
-        <!-- Search & Filter Section -->
-        <div class="container-xl mb-4">
-            <div class="card">
-                <div class="card-body">
-                    <div class="row g-3">
-                        <!-- Symbol Search -->
-                        <div class="col-md-4">
-                            <label class="form-label">Symbol Search</label>
-                            <select class="form-select symbol-selector" multiple="multiple">
-                                {% for symbol in symbol_results.keys() %}
-                                    <option value="{{ symbol }}">{{ symbol }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        
-                        <!-- Performance Filter -->
-                        <div class="col-md-4">
-                            <label class="form-label">Return Range (%)</label>
-                            <div id="return-range" class="mt-2"></div>
-                            <div class="d-flex justify-content-between mt-2">
-                                <span id="return-min" class="small text-muted"></span>
-                                <span id="return-max" class="small text-muted"></span>
-                            </div>
-                        </div>
-
-                        <!-- Metric Filters -->
-                        <div class="col-md-4">
-                            <label class="form-label">Quick Filters</label>
-                            <select class="form-select metric-filter">
-                                <option value="">All Symbols</option>
-                                <option value="profitable">Profitable Only</option>
-                                <option value="sharpe">Sharpe Ratio > 1</option>
-                                <option value="drawdown">Max Drawdown < 20%</option>
-                                <option value="winrate">Win Rate > 50%</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        
         <!-- Page body -->
         <div class="page-body">
             <div class="container-xl">
@@ -868,129 +1127,166 @@
                     </div>
                 </div>
 
+                <!-- Symbol Filters -->
+                <div class="card filter-card" data-aos="fade-up">
+                    <div class="card-body p-4">
+                        <div class="row g-4">
+                            <!-- Symbol Search -->
+                            <div class="col-lg-8">
+                                <label class="form-label d-flex align-items-center gap-2">
+                                    <i class="ti ti-search text-muted"></i>
+                                    <span>Symbol Search</span>
+                                </label>
+                                <div class="symbol-search-wrapper">
+                                    <select class="form-select symbol-selector" multiple>
+                                        {% for symbol in symbol_results.keys() %}
+                                            <option value="{{ symbol }}">{{ symbol }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Quick Filters -->
+                            <div class="col-lg-4">
+                                <label class="form-label d-flex align-items-center gap-2">
+                                    <i class="ti ti-adjustments text-muted"></i>
+                                    <span>Quick Filters</span>
+                                </label>
+                                <select class="form-select metric-filter">
+                                    <option value="">All Symbols</option>
+                                    <option value="profitable">Profitable Only</option>
+                                    <option value="sharpe">High Sharpe Ratio (>1)</option>
+                                    <option value="drawdown">Low Drawdown (<20%)</option>
+                                    <option value="winrate">High Win Rate (>50%)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Active Filters -->
+                        <div class="mt-4 active-filters d-flex flex-wrap gap-2"></div>
+                    </div>
+                </div>
+
                 <!-- Symbol-specific Sections -->
-                <div class="page-body">
-                    <div class="container-xl">
-                        {% for symbol, results in symbol_results.items() %}
-                        <div class="symbol-section" id="symbol-{{ symbol }}">
-                            <div class="symbol-header mb-4">
-                                <div class="d-flex align-items-center justify-content-between">
-                                    <div>
-                                        <div class="page-pretitle">Symbol Analysis</div>
-                                        <h2 class="page-title d-flex align-items-center">
-                                            {{ symbol }}
-                                            <span class="badge ms-3 {% if results.total_return >= 0 %}badge-success{% else %}badge-danger{% endif %}">
-                                                {{ "{:.2f}%".format(results.total_return * 100) }}
-                                            </span>
-                                        </h2>
-                                    </div>
-                                </div>
+                {% for symbol, results in symbol_results.items() %}
+                <div class="symbol-section" id="symbol-{{ symbol }}">
+                    <div class="symbol-header mb-4">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <div class="page-pretitle">Symbol Analysis</div>
+                                <h2 class="page-title d-flex align-items-center">
+                                    {{ symbol }}
+                                    <span class="badge ms-3 {% if results.total_return >= 0 %}badge-success{% else %}badge-danger{% endif %}">
+                                        {{ "{:.2f}%".format(results.total_return * 100) }}
+                                    </span>
+                                </h2>
                             </div>
+                        </div>
+                    </div>
 
-                            <!-- Metrics Dashboard -->
-                            <div class="metrics-dashboard">
-                                <!-- Performance Overview -->
-                                <div class="metric-card-large" data-aos="fade-up">
-                                    <div class="metric-header">
-                                        <h3><i class="fas fa-chart-line"></i> Performance Overview</h3>
-                                    </div>
-                                    <div class="metric-content">
-                                        <div class="trading-stats-grid">
-                                            {% for metric in results.metrics['Performance Metrics'] %}
-                                            <div class="stat-box">
-                                                <div class="stat-icon">
-                                                    <i class="fas fa-{{ 'arrow-trend-up' if 'return' in metric.title.lower() else 'chart-line' if 'alpha' in metric.title.lower() or 'beta' in metric.title.lower() else 'calculator' }}"></i>
-                                                </div>
-                                                <div class="stat-info">
-                                                    <div class="stat-label">{{ metric.title }}</div>
-                                                    <div class="stat-value {% if metric.color %}{{ metric.color }}{% endif %}" data-metric="sharpe">{{ metric.value }}</div>
-                                                </div>
-                                            </div>
-                                            {% endfor %}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Risk Analysis -->
-                                <div class="metric-card-medium" data-aos="fade-up" data-aos-delay="100">
-                                    <div class="metric-header">
-                                        <h3><i class="fas fa-shield-alt"></i> Risk Analysis</h3>
-                                    </div>
-                                    <div class="metric-content">
-                                        <div class="trading-stats-grid">
-                                            {% for metric in results.metrics['Risk Metrics'] %}
-                                            <div class="stat-box">
-                                                <div class="stat-icon">
-                                                    <i class="fas fa-{{ 'chart-area' if 'drawdown' in metric.title.lower() else 'chart-line' if 'volatility' in metric.title.lower() else 'shield' }}"></i>
-                                                </div>
-                                                <div class="stat-info">
-                                                    <div class="stat-label">{{ metric.title }}</div>
-                                                    <div class="stat-value {% if metric.color %}{{ metric.color }}{% endif %}" data-metric="drawdown">{{ metric.value }}</div>
-                                                </div>
-                                            </div>
-                                            {% endfor %}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Trading Statistics -->
-                                <div class="metric-card-medium" data-aos="fade-up" data-aos-delay="200">
-                                    <div class="metric-header">
-                                        <h3><i class="fas fa-calculator"></i> Trading Statistics</h3>
-                                    </div>
-                                    <div class="metric-content">
-                                        <div class="trading-stats-grid">
-                                            {% for metric in results.metrics['Trading Statistics'] %}
-                                            <div class="stat-box">
-                                                <div class="stat-icon">
-                                                    <i class="fas fa-{{ 'arrow-up' if 'win' in metric.title.lower() else 'arrow-down' if 'loss' in metric.title.lower() else 'chart-bar' }}"></i>
-                                                </div>
-                                                <div class="stat-info">
-                                                    <div class="stat-label">{{ metric.title }}</div>
-                                                    <div class="stat-value {% if metric.color %}{{ metric.color }}{% endif %}" data-metric="winrate">{{ metric.value }}</div>
-                                                </div>
-                                            </div>
-                                            {% endfor %}
-                                        </div>
-                                    </div>
-                                </div>
+                    <!-- Metrics Dashboard -->
+                    <div class="metrics-dashboard">
+                        <!-- Performance Overview -->
+                        <div class="metric-card-large" data-aos="fade-up">
+                            <div class="metric-header">
+                                <h3><i class="fas fa-chart-line"></i> Performance Overview</h3>
                             </div>
-
-                            <!-- Charts Section -->
-                            <div class="charts-grid">
-                                <div class="chart-container" data-aos="fade-up">
-                                    <div id="equity-{{ symbol|replace('.', '-') }}" style="height: 400px;"></div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="chart-container" data-aos="fade-up" data-aos-delay="100">
-                                            <div id="drawdown-{{ symbol|replace('.', '-') }}" style="height: 300px;"></div>
+                            <div class="metric-content">
+                                <div class="trading-stats-grid">
+                                    {% for metric in results.metrics['Performance Metrics'] %}
+                                    <div class="stat-box">
+                                        <div class="stat-icon">
+                                            <i class="fas fa-{{ 'arrow-trend-up' if 'return' in metric.title.lower() else 'chart-line' if 'alpha' in metric.title.lower() or 'beta' in metric.title.lower() else 'calculator' }}"></i>
+                                        </div>
+                                        <div class="stat-info">
+                                            <div class="stat-label">{{ metric.title }}</div>
+                                            <div class="stat-value" data-metric="{{ metric.title|lower|replace(' ', '_') }}">{{ metric.value }}</div>
                                         </div>
                                     </div>
-                                    <div class="col-md-6">
-                                        <div class="chart-container" data-aos="fade-up" data-aos-delay="200">
-                                            <div id="monthly-returns-{{ symbol|replace('.', '-') }}" style="height: 300px;"></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Trade Analysis Section -->
-                            <div class="section mb-5">
-                                <h3><i class="fas fa-exchange-alt"></i>Trade History</h3>
-                                <!-- Price Chart with Trade Points -->
-                                <div class="chart-container">
-                                    <div id="price-{{ symbol|replace('.', '-') }}" style="height: 400px;"></div>
-                                </div>
-                                <!-- Trades Table -->
-                                <div class="trades-table">
-                                    <div id="tradesGrid-{{ symbol|replace('.', '-') }}" class="ag-theme-alpine" style="height: 500px; width: 100%;"></div>
+                                    {% endfor %}
                                 </div>
                             </div>
                         </div>
-                        {% endfor %}
+
+                        <!-- Risk Analysis -->
+                        <div class="metric-card-medium" data-aos="fade-up" data-aos-delay="100">
+                            <div class="metric-header">
+                                <h3><i class="fas fa-shield-alt"></i> Risk Analysis</h3>
+                            </div>
+                            <div class="metric-content">
+                                <div class="trading-stats-grid">
+                                    {% for metric in results.metrics['Risk Metrics'] %}
+                                    <div class="stat-box">
+                                        <div class="stat-icon">
+                                            <i class="fas fa-{{ 'chart-area' if 'drawdown' in metric.title.lower() else 'chart-line' if 'volatility' in metric.title.lower() else 'shield' }}"></i>
+                                        </div>
+                                        <div class="stat-info">
+                                            <div class="stat-label">{{ metric.title }}</div>
+                                            <div class="stat-value" data-metric="{{ metric.title|lower|replace(' ', '_') }}">{{ metric.value }}</div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Trading Statistics -->
+                        <div class="metric-card-medium" data-aos="fade-up" data-aos-delay="200">
+                            <div class="metric-header">
+                                <h3><i class="fas fa-calculator"></i> Trading Statistics</h3>
+                            </div>
+                            <div class="metric-content">
+                                <div class="trading-stats-grid">
+                                    {% for metric in results.metrics['Trading Statistics'] %}
+                                    <div class="stat-box">
+                                        <div class="stat-icon">
+                                            <i class="fas fa-{{ 'arrow-up' if 'win' in metric.title.lower() else 'arrow-down' if 'loss' in metric.title.lower() else 'chart-bar' }}"></i>
+                                        </div>
+                                        <div class="stat-info">
+                                            <div class="stat-label">{{ metric.title }}</div>
+                                            <div class="stat-value" data-metric="{{ metric.title|lower|replace(' ', '_') }}">{{ metric.value }}</div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Section -->
+                    <div class="charts-grid">
+                        <div class="chart-container" data-aos="fade-up">
+                            <div id="equity-{{ symbol|replace('.', '-') }}" style="height: 400px;"></div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="chart-container" data-aos="fade-up" data-aos-delay="100">
+                                    <div id="drawdown-{{ symbol|replace('.', '-') }}" style="height: 300px;"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="chart-container" data-aos="fade-up" data-aos-delay="200">
+                                    <div id="monthly-returns-{{ symbol|replace('.', '-') }}" style="height: 300px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Trade Analysis Section -->
+                    <div class="section mb-5">
+                        <h3><i class="fas fa-exchange-alt"></i>Trade History</h3>
+                        <!-- Price Chart with Trade Points -->
+                        <div class="chart-container">
+                            <div id="price-{{ symbol|replace('.', '-') }}" style="height: 400px;"></div>
+                        </div>
+                        <!-- Trades Table -->
+                        <div class="trades-table">
+                            <div id="tradesGrid-{{ symbol|replace('.', '-') }}" class="ag-theme-alpine" style="height: 500px; width: 100%;"></div>
+                        </div>
                     </div>
                 </div>
+                {% endfor %}
+
             </div>
         </div>
     </div>
@@ -1353,55 +1649,43 @@
 
             // Initialize Select2
             $('.symbol-selector').select2({
-                placeholder: 'Search symbols...',
+                theme: 'default',
+                placeholder: 'Type to search symbols...',
                 allowClear: true,
                 width: '100%',
-                theme: 'bootstrap4'
-            }).on('select2:select select2:unselect', function(e) {
+                templateResult: formatSymbolOption,
+                templateSelection: formatSymbolOption,
+                escapeMarkup: function(markup) {
+                    return markup;
+                }
+            }).on('change', function() {
                 const selectedSymbols = $(this).val();
                 showSelectedSymbols(selectedSymbols);
+                updateActiveFilters();
             });
 
-            // Initialize noUiSlider
-            const returnRange = document.getElementById('return-range');
-            if (returnRange) {
-                noUiSlider.create(returnRange, {
-                    start: [-100, 100],
-                    connect: true,
-                    range: {
-                        'min': -100,
-                        'max': 100
-                    },
-                    step: 1,
-                    tooltips: true,
-                    format: {
-                        to: value => Math.round(value) + '%',
-                        from: value => Number(value.replace('%', ''))
-                    }
-                });
+            // Initialize metric filter
+            $('.metric-filter').on('change', function() {
+                filterSymbols();
+                updateActiveFilters();
+            });
 
-                // Update range labels
-                const returnMin = document.getElementById('return-min');
-                const returnMax = document.getElementById('return-max');
-                returnRange.noUiSlider.on('update', function(values) {
-                    returnMin.textContent = values[0];
-                    returnMax.textContent = values[1];
-                    filterSymbols();
-                });
+            // Format symbol options with icons
+            function formatSymbolOption(option) {
+                if (!option.id) return option.text;
+                return `<div class="d-flex align-items-center gap-2">
+                    <i class="ti ti-chart-candlestick text-primary"></i>
+                    <span>${option.text}</span>
+                </div>`;
             }
 
-            // Filter function
             function filterSymbols() {
                 const selectedSymbols = $('.symbol-selector').val() || [];
-                const returnRangeValues = returnRange ? returnRange.noUiSlider.get().map(v => parseFloat(v)) : [-100, 100];
                 const metricFilter = $('.metric-filter').val();
 
                 $('.symbol-section').each(function() {
                     const section = $(this);
                     const symbol = section.attr('id').replace('symbol-', '');
-                    const returnText = section.find('.badge').text().replace('%', '');
-                    const returnValue = parseFloat(returnText);
-                    
                     let visible = true;
 
                     // Symbol filter
@@ -1409,59 +1693,84 @@
                         visible = selectedSymbols.includes(symbol);
                     }
 
-                    // Return range filter
-                    if (visible && !isNaN(returnValue)) {
-                        visible = returnValue >= returnRangeValues[0] && returnValue <= returnRangeValues[1];
-                    }
-
                     // Metric filters
                     if (visible && metricFilter) {
                         const metrics = {
-                            sharpe: parseFloat(section.find('[data-metric="sharpe"]').text()),
-                            drawdown: parseFloat(section.find('[data-metric="drawdown"]').text().replace('%', '')),
-                            winrate: parseFloat(section.find('[data-metric="winrate"]').text().replace('%', '')),
+                            total_return: parseFloat(section.find('[data-metric="total_return"]').text().replace('%', '')),
+                            sharpe_ratio: parseFloat(section.find('[data-metric="sharpe_ratio"]').text()),
+                            max_drawdown: parseFloat(section.find('[data-metric="max_drawdown"]').text().replace('%', '')),
+                            win_rate: parseFloat(section.find('[data-metric="win_rate"]').text().replace('%', ''))
                         };
 
                         switch(metricFilter) {
                             case 'profitable':
-                                visible = returnValue > 0;
+                                visible = metrics.total_return > 0;
                                 break;
                             case 'sharpe':
-                                visible = metrics.sharpe > 1;
+                                visible = metrics.sharpe_ratio > 1;
                                 break;
                             case 'drawdown':
-                                visible = Math.abs(metrics.drawdown) < 20;
+                                visible = Math.abs(metrics.max_drawdown) < 20;
                                 break;
                             case 'winrate':
-                                visible = metrics.winrate > 50;
+                                visible = metrics.win_rate > 50;
                                 break;
                         }
                     }
 
-                    section.toggle(visible);
+                    if (visible) {
+                        section.fadeIn(300);
+                    } else {
+                        section.fadeOut(300);
+                    }
                 });
 
                 // Redraw charts for visible sections
-                $('.symbol-section:visible').each(function() {
-                    const symbol = $(this).attr('id').replace('symbol-', '');
-                    const charts = [
-                        `equity-${symbol}`,
-                        `drawdown-${symbol}`,
-                        `monthly-returns-${symbol}`,
-                        `price-${symbol}`
-                    ];
-                    
-                    charts.forEach(chartId => {
-                        const chart = Highcharts.charts.find(c => c && c.renderTo.id === chartId);
-                        if (chart) {
-                            chart.reflow();
-                        }
+                setTimeout(() => {
+                    $('.symbol-section:visible').each(function() {
+                        const symbol = $(this).attr('id').replace('symbol-', '');
+                        const charts = [
+                            `equity-${symbol}`,
+                            `drawdown-${symbol}`,
+                            `monthly-returns-${symbol}`,
+                            `price-${symbol}`
+                        ];
+                        
+                        charts.forEach(chartId => {
+                            const chart = Highcharts.charts.find(c => c && c.renderTo.id === chartId);
+                            if (chart) {
+                                chart.reflow();
+                            }
+                        });
                     });
-                });
+                }, 350);
             }
 
-            // Bind filter events
-            $('.symbol-selector, .metric-filter').on('change', filterSymbols);
+            function updateActiveFilters() {
+                const container = $('.active-filters');
+                container.empty();
+                
+                const selectedSymbols = $('.symbol-selector').val();
+                const metricFilter = $('.metric-filter').val();
+
+                if (selectedSymbols && selectedSymbols.length) {
+                    container.append(`
+                        <span class="badge bg-primary me-2">
+                            <i class="ti ti-chart-candlestick me-1"></i>
+                            ${selectedSymbols.length} symbols selected
+                        </span>
+                    `);
+                }
+
+                if (metricFilter) {
+                    container.append(`
+                        <span class="badge bg-success me-2">
+                            <i class="ti ti-adjustments me-1"></i>
+                            ${$('.metric-filter option:selected').text()}
+                        </span>
+                    `);
+                }
+            }
         });
 
         function showSelectedSymbols(selectedSymbols) {
