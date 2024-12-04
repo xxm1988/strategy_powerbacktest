@@ -29,6 +29,12 @@
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     
+    <!-- Search & Filter Libraries -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/nouislider@14.6.3/distribute/nouislider.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/nouislider@14.6.3/distribute/nouislider.min.js"></script>
+
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -698,6 +704,51 @@
             border-bottom: 1px solid #e9ecef;
             padding-bottom: 1.5rem;
         }
+
+        .select2-container {
+            width: 100% !important;
+        }
+
+        .select2-container .select2-selection--multiple {
+            min-height: 38px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+        }
+
+        .select2-container .select2-search__field {
+            margin-top: 7px;
+        }
+
+        .select2-container .select2-selection__choice {
+            background-color: #206bc4;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            padding: 2px 8px;
+            margin: 5px 5px 0;
+        }
+
+        .select2-container .select2-selection__choice__remove {
+            color: white;
+            margin-right: 5px;
+        }
+
+        .noUi-connect {
+            background: #206bc4;
+        }
+
+        .filtered-out {
+            display: none;
+        }
+
+        .symbol-section {
+            transition: opacity 0.3s ease;
+        }
+
+        .symbol-section.filtered {
+            opacity: 0.5;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -727,6 +778,46 @@
                                 <i class="ti ti-chart-bar"></i>
                                 View Full Report
                             </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Search & Filter Section -->
+        <div class="container-xl mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <!-- Symbol Search -->
+                        <div class="col-md-4">
+                            <label class="form-label">Symbol Search</label>
+                            <select class="form-select symbol-selector" multiple="multiple">
+                                {% for symbol in symbol_results.keys() %}
+                                    <option value="{{ symbol }}">{{ symbol }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <!-- Performance Filter -->
+                        <div class="col-md-4">
+                            <label class="form-label">Return Range (%)</label>
+                            <div id="return-range" class="mt-2"></div>
+                            <div class="d-flex justify-content-between mt-2">
+                                <span id="return-min" class="small text-muted"></span>
+                                <span id="return-max" class="small text-muted"></span>
+                            </div>
+                        </div>
+
+                        <!-- Metric Filters -->
+                        <div class="col-md-4">
+                            <label class="form-label">Quick Filters</label>
+                            <select class="form-select metric-filter">
+                                <option value="">All Symbols</option>
+                                <option value="profitable">Profitable Only</option>
+                                <option value="sharpe">Sharpe Ratio > 1</option>
+                                <option value="drawdown">Max Drawdown < 20%</option>
+                                <option value="winrate">Win Rate > 50%</option>
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -812,9 +903,7 @@
                                                 </div>
                                                 <div class="stat-info">
                                                     <div class="stat-label">{{ metric.title }}</div>
-                                                    <div class="stat-value {% if metric.color %}{{ metric.color }}{% endif %}">
-                                                        {{ metric.value }}
-                                                    </div>
+                                                    <div class="stat-value {% if metric.color %}{{ metric.color }}{% endif %}" data-metric="sharpe">{{ metric.value }}</div>
                                                 </div>
                                             </div>
                                             {% endfor %}
@@ -836,9 +925,7 @@
                                                 </div>
                                                 <div class="stat-info">
                                                     <div class="stat-label">{{ metric.title }}</div>
-                                                    <div class="stat-value {% if metric.color %}{{ metric.color }}{% endif %}">
-                                                        {{ metric.value }}
-                                                    </div>
+                                                    <div class="stat-value {% if metric.color %}{{ metric.color }}{% endif %}" data-metric="drawdown">{{ metric.value }}</div>
                                                 </div>
                                             </div>
                                             {% endfor %}
@@ -860,9 +947,7 @@
                                                 </div>
                                                 <div class="stat-info">
                                                     <div class="stat-label">{{ metric.title }}</div>
-                                                    <div class="stat-value {% if metric.color %}{{ metric.color }}{% endif %}">
-                                                        {{ metric.value }}
-                                                    </div>
+                                                    <div class="stat-value {% if metric.color %}{{ metric.color }}{% endif %}" data-metric="winrate">{{ metric.value }}</div>
                                                 </div>
                                             </div>
                                             {% endfor %}
@@ -1265,7 +1350,141 @@
                     }
                 });
             });
+
+            // Initialize Select2
+            $('.symbol-selector').select2({
+                placeholder: 'Search symbols...',
+                allowClear: true,
+                width: '100%',
+                theme: 'bootstrap4'
+            }).on('select2:select select2:unselect', function(e) {
+                const selectedSymbols = $(this).val();
+                showSelectedSymbols(selectedSymbols);
+            });
+
+            // Initialize noUiSlider
+            const returnRange = document.getElementById('return-range');
+            if (returnRange) {
+                noUiSlider.create(returnRange, {
+                    start: [-100, 100],
+                    connect: true,
+                    range: {
+                        'min': -100,
+                        'max': 100
+                    },
+                    step: 1,
+                    tooltips: true,
+                    format: {
+                        to: value => Math.round(value) + '%',
+                        from: value => Number(value.replace('%', ''))
+                    }
+                });
+
+                // Update range labels
+                const returnMin = document.getElementById('return-min');
+                const returnMax = document.getElementById('return-max');
+                returnRange.noUiSlider.on('update', function(values) {
+                    returnMin.textContent = values[0];
+                    returnMax.textContent = values[1];
+                    filterSymbols();
+                });
+            }
+
+            // Filter function
+            function filterSymbols() {
+                const selectedSymbols = $('.symbol-selector').val() || [];
+                const returnRangeValues = returnRange ? returnRange.noUiSlider.get().map(v => parseFloat(v)) : [-100, 100];
+                const metricFilter = $('.metric-filter').val();
+
+                $('.symbol-section').each(function() {
+                    const section = $(this);
+                    const symbol = section.attr('id').replace('symbol-', '');
+                    const returnText = section.find('.badge').text().replace('%', '');
+                    const returnValue = parseFloat(returnText);
+                    
+                    let visible = true;
+
+                    // Symbol filter
+                    if (selectedSymbols.length > 0) {
+                        visible = selectedSymbols.includes(symbol);
+                    }
+
+                    // Return range filter
+                    if (visible && !isNaN(returnValue)) {
+                        visible = returnValue >= returnRangeValues[0] && returnValue <= returnRangeValues[1];
+                    }
+
+                    // Metric filters
+                    if (visible && metricFilter) {
+                        const metrics = {
+                            sharpe: parseFloat(section.find('[data-metric="sharpe"]').text()),
+                            drawdown: parseFloat(section.find('[data-metric="drawdown"]').text().replace('%', '')),
+                            winrate: parseFloat(section.find('[data-metric="winrate"]').text().replace('%', '')),
+                        };
+
+                        switch(metricFilter) {
+                            case 'profitable':
+                                visible = returnValue > 0;
+                                break;
+                            case 'sharpe':
+                                visible = metrics.sharpe > 1;
+                                break;
+                            case 'drawdown':
+                                visible = Math.abs(metrics.drawdown) < 20;
+                                break;
+                            case 'winrate':
+                                visible = metrics.winrate > 50;
+                                break;
+                        }
+                    }
+
+                    section.toggle(visible);
+                });
+
+                // Redraw charts for visible sections
+                $('.symbol-section:visible').each(function() {
+                    const symbol = $(this).attr('id').replace('symbol-', '');
+                    const charts = [
+                        `equity-${symbol}`,
+                        `drawdown-${symbol}`,
+                        `monthly-returns-${symbol}`,
+                        `price-${symbol}`
+                    ];
+                    
+                    charts.forEach(chartId => {
+                        const chart = Highcharts.charts.find(c => c && c.renderTo.id === chartId);
+                        if (chart) {
+                            chart.reflow();
+                        }
+                    });
+                });
+            }
+
+            // Bind filter events
+            $('.symbol-selector, .metric-filter').on('change', filterSymbols);
         });
+
+        function showSelectedSymbols(selectedSymbols) {
+            $('.symbol-section').each(function() {
+                const section = $(this);
+                const symbol = section.attr('id').replace('symbol-', '');
+                
+                if (!selectedSymbols || selectedSymbols.length === 0) {
+                    // If no symbols selected, show all
+                    section.show();
+                    return;
+                }
+                
+                if (Array.isArray(selectedSymbols)) {
+                    section.toggle(selectedSymbols.includes(symbol));
+                } else {
+                    section.toggle(selectedSymbols === symbol);
+                }
+            });
+
+            // Trigger resize event for charts
+            window.dispatchEvent(new Event('resize'));
+        }
     </script>
 </body>
 </html> 
