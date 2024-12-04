@@ -19,6 +19,10 @@
     <script src="https://cdn.jsdelivr.net/npm/dayjs"></script>
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <!-- AG Grid -->
+    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.noStyle.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-grid.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-theme-alpine.css">
     
     <style>
         body { 
@@ -420,64 +424,96 @@
                 <div id="priceChart" style="height: 400px;"></div>
             </div>
             <div class="trades-table">
-                <table id="tradesTable" class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Type</th>
-                            <th>Price</th>
-                            <th>Quantity</th>
-                            <th>Cost</th>
-                            <th>Commission</th>
-                            <th>P&L</th>
-                        </tr>
-                    </thead>
-                </table>
+                <div id="tradesGrid" class="ag-theme-alpine" style="height: 500px; width: 100%;"></div>
             </div>
         </div>
     </div>
 
     <script>
-        // Initialize DataTable with enhanced styling
+        // Initialize AG Grid for trades table
         $(document).ready(function() {
-            $('#tradesTable').DataTable({
-                data: {{ trades_data|tojson }},
-                columns: [
-                    { data: 'timestamp' },
+            const gridOptions = {
+                defaultColDef: {
+                    sortable: true,
+                    filter: true,
+                    resizable: true,
+                    minWidth: 100,
+                },
+                columnDefs: [
                     { 
-                        data: 'type',
-                        render: function(data, type, row) {
-                            return `<span class="badge ${data === 'BUY' ? 'badge-buy' : 'badge-sell'}">${data}</span>`;
-                        }
+                        field: 'timestamp',
+                        headerName: 'Date',
+                        sort: 'desc',
+                        minWidth: 160
                     },
                     { 
-                        data: 'price',
-                        render: $.fn.dataTable.render.number(',', '.', 2, '$')
-                    },
-                    { data: 'quantity' },
-                    { 
-                        data: 'cost',
-                        render: $.fn.dataTable.render.number(',', '.', 2, '$')
-                    },
-                    { 
-                        data: 'commission',
-                        render: $.fn.dataTable.render.number(',', '.', 2, '$')
+                        field: 'type',
+                        headerName: 'Type',
+                        cellRenderer: params => {
+                            const type = params.value.toUpperCase();
+                            return `<span class="badge ${type === 'BUY' ? 'badge-buy' : 'badge-sell'}">${type}</span>`;
+                        },
+                        minWidth: 120,
+                        filter: 'agSetColumnFilter'
                     },
                     { 
-                        data: 'pnl',
-                        render: function(data, type, row) {
-                            const formatted = $.fn.dataTable.render.number(',', '.', 2, '$').display(data);
-                            return `<span class="${data >= 0 ? 'positive' : 'negative'}">${formatted}</span>`;
-                        }
+                        field: 'price',
+                        headerName: 'Price',
+                        valueFormatter: params => `$${params.value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,
+                        type: 'numericColumn'
+                    },
+                    { 
+                        field: 'quantity',
+                        headerName: 'Quantity',
+                        type: 'numericColumn'
+                    },
+                    { 
+                        field: 'cost',
+                        headerName: 'Cost',
+                        valueFormatter: params => `$${params.value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,
+                        type: 'numericColumn'
+                    },
+                    { 
+                        field: 'commission',
+                        headerName: 'Commission',
+                        valueFormatter: params => `$${params.value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,
+                        type: 'numericColumn'
+                    },
+                    { 
+                        field: 'pnl',
+                        headerName: 'P&L',
+                        cellRenderer: params => {
+                            const value = params.value;
+                            const formatted = `$${Math.abs(value).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                            return `<span class="${value >= 0 ? 'positive' : 'negative'}">${formatted}</span>`;
+                        },
+                        type: 'numericColumn'
                     }
                 ],
-                order: [[0, 'desc']],
-                pageLength: 25,
-                dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rtip',
-                language: {
-                    search: "_INPUT_",
-                    searchPlaceholder: "Search trades..."
-                }
+                pagination: true,
+                paginationPageSize: 25,
+                rowHeight: 48,
+                headerHeight: 48,
+                animateRows: true,
+                enableCellTextSelection: true,
+                suppressDragLeaveHidesColumns: true,
+                rowClass: 'trade-row'
+            };
+
+            // Add custom CSS for AG Grid styling
+            const style = document.createElement('style');
+            style.textContent = `
+                .ag-theme-alpine {
+                    --
+            `;
+            document.head.appendChild(style);
+
+            // Create the grid API
+            const gridApi = new agGrid.Grid(document.getElementById('tradesGrid'), gridOptions);
+
+            // Set the data
+            gridApi.setRowData({
+                data: {{ trades_data|tojson }}
             });
         });
 

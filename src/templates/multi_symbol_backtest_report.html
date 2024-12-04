@@ -12,6 +12,9 @@
     <script src="https://code.highcharts.com/stock/highstock.js"></script>
     <script src="https://code.highcharts.com/modules/heatmap.js"></script>
     <script src="https://code.highcharts.com/modules/accessibility.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.noStyle.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-grid.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-theme-alpine.css">
     
     <style>
         body {
@@ -340,6 +343,24 @@
             border-color: #3498db;
             color: white !important;
         }
+
+        .trades-table {
+            background: white;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .positive { 
+            color: #00c853;
+            font-weight: 600;
+        }
+
+        .negative { 
+            color: #ff1744;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
@@ -446,73 +467,121 @@
             </div>
         </div>
 
-        <!-- Trades Table Section -->
-        <div class="trades-section">
-            <h3><i class="fas fa-table"></i> Trade History</h3>
-            <div class="table-responsive">
-                <table id="trades-{{ symbol }}" class="table table-striped table-hover">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Type</th>
-                            <th>Price</th>
-                            <th>Quantity</th>
-                            <th>Cost</th>
-                            <th>Commission</th>
-                            <th>P&L</th>
-                        </tr>
-                    </thead>
-                </table>
+        <!-- Trade Analysis Section -->
+        <div class="section mb-5">
+            <h3><i class="fas fa-exchange-alt"></i>Trade History</h3>
+            <!-- Price Chart with Trade Points -->
+            <div class="chart-container">
+                <div id="price-{{ symbol }}" style="height: 400px;"></div>
+            </div>
+            <!-- Trades Table -->
+            <div class="trades-table">
+                <div id="tradesGrid-{{ symbol }}" class="ag-theme-alpine" style="height: 500px; width: 100%;"></div>
             </div>
         </div>
     </div>
     {% endfor %}
 
     <script>
-        // Initialize DataTables for all symbol trade tables
+        // Initialize AG Grid for all symbol trade tables
         $(document).ready(function() {
-            // Reference existing DataTable configuration
-            const tableConfig = {
-                columns: [
-                    { data: 'timestamp' },
+            const gridOptions = {
+                defaultColDef: {
+                    sortable: true,
+                    filter: true,
+                    resizable: true,
+                    minWidth: 100,
+                },
+                columnDefs: [
                     { 
-                        data: 'type',
-                        render: function(data, type, row) {
-                            return `<span class="badge ${data === 'BUY' ? 'badge-buy' : 'badge-sell'}">${data}</span>`;
-                        }
+                        field: 'timestamp',
+                        headerName: 'Date',
+                        sort: 'desc',
+                        minWidth: 160
                     },
                     { 
-                        data: 'price',
-                        render: $.fn.dataTable.render.number(',', '.', 2, '$')
-                    },
-                    { data: 'quantity' },
-                    { 
-                        data: 'cost',
-                        render: $.fn.dataTable.render.number(',', '.', 2, '$')
-                    },
-                    { 
-                        data: 'commission',
-                        render: $.fn.dataTable.render.number(',', '.', 2, '$')
+                        field: 'type',
+                        headerName: 'Type',
+                        cellRenderer: params => {
+                            const type = params.value.toUpperCase();
+                            return `<span class="badge ${type === 'BUY' ? 'badge-buy' : 'badge-sell'}">${type}</span>`;
+                        },
+                        minWidth: 120,
+                        filter: 'agSetColumnFilter'
                     },
                     { 
-                        data: 'pnl',
-                        render: function(data, type, row) {
-                            const formatted = $.fn.dataTable.render.number(',', '.', 2, '$').display(data);
-                            return `<span class="${data >= 0 ? 'positive' : 'negative'}">${formatted}</span>`;
-                        }
+                        field: 'price',
+                        headerName: 'Price',
+                        valueFormatter: params => `$${params.value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,
+                        type: 'numericColumn'
+                    },
+                    { 
+                        field: 'quantity',
+                        headerName: 'Quantity',
+                        type: 'numericColumn'
+                    },
+                    { 
+                        field: 'cost',
+                        headerName: 'Cost',
+                        valueFormatter: params => `$${params.value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,
+                        type: 'numericColumn'
+                    },
+                    { 
+                        field: 'commission',
+                        headerName: 'Commission',
+                        valueFormatter: params => `$${params.value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,
+                        type: 'numericColumn'
+                    },
+                    { 
+                        field: 'pnl',
+                        headerName: 'P&L',
+                        cellRenderer: params => {
+                            const value = params.value;
+                            const formatted = `$${Math.abs(value).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                            return `<span class="${value >= 0 ? 'positive' : 'negative'}">${formatted}</span>`;
+                        },
+                        type: 'numericColumn'
                     }
                 ],
-                order: [[0, 'desc']],
-                pageLength: 25,
-                dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rtip'
+                pagination: true,
+                paginationPageSize: 25,
+                rowHeight: 48,
+                headerHeight: 48,
+                animateRows: true,
+                enableCellTextSelection: true,
+                suppressDragLeaveHidesColumns: true,
+                rowClass: 'trade-row'
             };
 
-            // Initialize tables for each symbol
+            // Add custom CSS for AG Grid styling
+            const style = document.createElement('style');
+            style.textContent = `
+                .ag-theme-alpine {
+                    --ag-font-family: 'Inter', sans-serif;
+                    --ag-font-size: 14px;
+                    --ag-header-background-color: #f8f9fa;
+                    --ag-odd-row-background-color: #ffffff;
+                    --ag-row-hover-color: #f8f9fa;
+                    --ag-selected-row-background-color: #e9ecef;
+                    --ag-header-column-separator-display: none;
+                    --ag-borders: none;
+                }
+                
+                .trade-row {
+                    border-bottom: 1px solid #f0f0f0;
+                }
+                
+                .ag-header-cell {
+                    font-weight: 600;
+                }
+            `;
+            document.head.appendChild(style);
+
+            // Initialize grids for each symbol
             {% for symbol in symbol_results.keys() %}
-                $(`#trades-{{ symbol }}`).DataTable({
-                    ...tableConfig,
-                    data: {{ symbol_results[symbol].trades|tojson }}
-                });
+                const gridDiv = document.querySelector(`#tradesGrid-{{ symbol }}`);
+                const gridInstance = new agGrid.Grid(gridDiv, gridOptions);
+                gridInstance.gridOptions.api.setRowData({{ symbol_results[symbol].trades|tojson }});
             {% endfor %}
         });
 
@@ -525,7 +594,6 @@
             }
         });
 
-        // Portfolio Overview Charts
         // Combined Portfolio Equity Curve
         Highcharts.stockChart('portfolioEquity', {
             chart: { 
@@ -697,6 +765,85 @@
                     valueDecimals: 2
                 }
             });
+
+            // Price Chart with Trade Points
+            Highcharts.stockChart('price-{{ symbol }}', {
+                chart: { 
+                    type: 'line',
+                    style: { fontFamily: 'Inter, sans-serif' }
+                },
+                title: { text: '{{ symbol }} Price Chart with Trades' },
+                yAxis: { 
+                    title: { text: 'Price ($)' },
+                    labels: { formatter: function() { return '$' + this.value.toLocaleString(); } }
+                },
+                series: [{
+                    name: 'Price',
+                    data: {{ results.price_data|tojson }},
+                    color: '#2c3e50',
+                    lineWidth: 2,
+                    id: 'price'
+                }, {
+                    type: 'scatter',
+                    name: 'Trade Points',
+                    data: {{ results.trade_annotations|tojson|safe }}.map(function(point) {
+                        return {
+                            x: point.x,
+                            y: point.y,
+                            marker: {
+                                symbol: point.title === '↑' ? 'triangle' : 'triangle-down',
+                                fillColor: point.title === '↑' ? '#00c853' : '#ff1744',
+                                lineColor: point.title === '↑' ? '#00c853' : '#ff1744',
+                                lineWidth: 1,
+                                radius: 8
+                            },
+                            tooltip: {
+                                pointFormat: point.text
+                            }
+                        };
+                    }),
+                    tooltip: {
+                        pointFormat: '{point.tooltip}'
+                    }
+                }],
+                tooltip: {
+                    shared: true,
+                    split: false,
+                    valuePrefix: '$',
+                    valueDecimals: 2
+                },
+                rangeSelector: {
+                    enabled: true,
+                    buttons: [{
+                        type: 'day',
+                        count: 7,
+                        text: '1w'
+                    }, {
+                        type: 'month',
+                        count: 1,
+                        text: '1m'
+                    }, {
+                        type: 'month',
+                        count: 3,
+                        text: '3m'
+                    }, {
+                        type: 'month',
+                        count: 6,
+                        text: '6m'
+                    }, {
+                        type: 'year',
+                        count: 1,
+                        text: '1y'
+                    }, {
+                        type: 'all',
+                        text: 'All'
+                    }],
+                    selected: 4
+                },
+                navigator: {
+                    enabled: true
+                }
+            });
         {% endfor %}
 
         // Initialize AOS
@@ -707,4 +854,5 @@
         });
     </script>
 </body>
+</html> 
 </html> 

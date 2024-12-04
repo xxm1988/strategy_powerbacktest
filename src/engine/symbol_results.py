@@ -1,19 +1,19 @@
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import Dict, List, Any
 import pandas as pd
 from .backtest_report import BacktestReport
 
 @dataclass
 class SymbolResults:
-    """Results for individual symbol"""
+    """Results for individual symbol in multi-symbol backtest"""
     symbol: str
-    trades: List[Dict]
-    metrics: Dict[str, float]
+    trades: List[Dict[str, Any]]
+    metrics: Dict[str, List[Dict[str, Any]]]
     equity_curve: pd.Series
     drawdown: pd.Series
     monthly_returns: pd.DataFrame
-    price_data: pd.Series
-    trade_annotations: List[Dict]
+    trade_annotations: List[Dict[str, Any]]
+    portfolio: pd.DataFrame
 
     @classmethod
     def from_backtest_report(cls, report: BacktestReport) -> 'SymbolResults':
@@ -25,6 +25,6 @@ class SymbolResults:
             equity_curve=report.portfolio['total'],
             drawdown=report._calculate_drawdowns(),
             monthly_returns=report.monthly_returns,
-            price_data=report.portfolio['close'],
-            trade_annotations=report._prepare_trade_annotations()
+            trade_annotations=report._prepare_trade_annotations(),
+            portfolio=report.portfolio
         ) 

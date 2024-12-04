@@ -75,6 +75,33 @@ class MultiSymbolBacktestReport:
         return [[int(t.timestamp() * 1000), float(v)] 
                 for t, v in combined_equity.items()]
 
+    def _prepare_symbol_price_data(self, symbol: str, results: SymbolResults) -> List[List]:
+        """Prepare price data for symbol chart"""
+        if not hasattr(results, 'portfolio') or results.portfolio is None:
+            logging.warning(f"No portfolio data available for symbol {symbol}")
+            return []
+        
+        return [[int(t.timestamp() * 1000), float(p)] 
+                for t, p in zip(results.portfolio.index, results.portfolio['close'])]
+
+    def _prepare_symbol_trade_annotations(self, trades: List[Dict]) -> List[Dict]:
+        """Prepare trade annotations for symbol chart"""
+        annotations = []
+        for trade in trades:
+            timestamp = pd.Timestamp(trade['timestamp']).timestamp() * 1000
+            price = float(trade['price'])
+            trade_type = trade['type'].upper()
+            
+            annotation = {
+                'x': int(timestamp),
+                'y': price,
+                'title': '↑' if trade_type == 'BUY' else '↓',
+                'text': f"{trade_type} @ ${price:,.2f}\nQty: {trade['quantity']}",
+                'className': f"trade-{trade_type.lower()}"
+            }
+            annotations.append(annotation)
+        return annotations
+
     def generate_report(self, output_dir: str) -> None:
         """Generate HTML report for multi-symbol backtest"""
         template_path = os.path.join(os.path.dirname(__file__), 
@@ -139,7 +166,14 @@ class MultiSymbolBacktestReport:
                         {'title': 'Total Trades', 'value': trade_metrics['Total Trades']},
                         {'title': 'Win Rate', 'value': trade_metrics['Win Rate']},
                         {'title': 'Profit Factor', 'value': trade_metrics['Profit Factor']},
-                        {'title': 'Average Trade', 'value': trade_metrics['Average Trade Return']}
+                        {'title': 'Average Trade Return', 'value': trade_metrics['Average Trade Return'],
+                         'color': 'positive' if float(trade_metrics['Average Trade Return'].strip('$').replace(',', '')) > 0 else 'negative'},
+                        {'title': 'Average Win', 'value': trade_metrics['Average Win'], 'color': 'positive'},
+                        {'title': 'Average Loss', 'value': trade_metrics['Average Loss'], 'color': 'negative'},
+                        {'title': 'Largest Win', 'value': trade_metrics['Largest Win'], 'color': 'positive'},
+                        {'title': 'Largest Loss', 'value': trade_metrics['Largest Loss'], 'color': 'negative'},
+                        {'title': 'Max Consecutive Wins', 'value': trade_metrics['Max Consecutive Wins']},
+                        {'title': 'Max Consecutive Losses', 'value': trade_metrics['Max Consecutive Losses']}
                     ]
                 },
                 'total_return': float(perf_metrics['Total Return'].strip('%')),
@@ -149,13 +183,8 @@ class MultiSymbolBacktestReport:
                             for t, v in results.drawdown.items()],
                 'monthly_returns': [[int(pd.Timestamp(t).timestamp() * 1000), float(v)] 
                                   for t, v in results.monthly_returns['returns'].items()],
-                'trade_annotations': [{
-                    'x': int(pd.Timestamp(ann['x']).timestamp() * 1000),
-                    'y': float(ann['y']),
-                    'type': str(ann.get('type', '')),
-                    'quantity': int(ann.get('quantity', 0)),
-                    'text': str(ann.get('text', ''))
-                } for ann in results.trade_annotations]
+                'price_data': self._prepare_symbol_price_data(symbol, results),
+                'trade_annotations': self._prepare_symbol_trade_annotations(results.trades),
             }
 
         # Generate HTML content
