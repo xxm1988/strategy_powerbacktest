@@ -41,7 +41,7 @@ A professional-grade algorithmic trading backtesting framework with seamless int
 
 1. **Installation**
 ```bash
-git clone https://github.com/yourusername/strategy-powerbacktest.git
+git clone https://github.com/billpwchan/strategy-powerbacktest.git
 cd strategy-powerbacktest
 python -m venv venv
 source venv/bin/activate # On Windows: venv\Scripts\activate
@@ -55,7 +55,7 @@ pip install -r requirements.txt
 
 3. **Run a Sample Backtest**
 ```bash
-python main.py --strategy macd --symbol HK.00700 --start-date 2023-01-01 --end-date 2023-12-31 --initial-capital 100000 --commission 0.001
+python main.py --strategy macd --symbol HK.00700 HK.09988 --start-date 2023-01-01 --end-date 2023-12-31 --initial-capital 100000 --commission 0.001
 ```
 ## 📊 Example Strategy
 
@@ -101,19 +101,22 @@ The backtester provides comprehensive performance analytics:
 4. Configure parameters in config.yaml
 
 ### Project Structure
-strategy_powerbacktest/
+```bash
+strategy-powerbacktest/
 ├── src/
-│ ├── data/ # Data handling and storage
-│ ├── strategy/ # Trading strategies
-│ ├── engine/ # Backtesting engine
-│ └── utils/ # Utilities and helpers
-├── tests/ # Test suite
-├── config.yaml # Configuration
-└── main.py # Entry point
+│   ├── data/          # Data handling
+│   ├── strategy/      # Trading strategies
+│   ├── engine/        # Backtesting engine
+│   ├── templates/     # HTML report templates
+│   └── utils/         # Helper functions
+├── tests/             # Test suite
+├── config.yaml        # Configuration
+└── main.py           # Entry point
+```
 
 ## 📝 License
 
-MIT License - see LICENSE file for details
+Apache License 2.0 - see LICENSE file for details
 
 ## 🤝 Contributing
 
