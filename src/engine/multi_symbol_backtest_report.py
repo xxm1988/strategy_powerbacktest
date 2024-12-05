@@ -165,6 +165,9 @@ class MultiSymbolBacktestReport:
             risk_metrics = {m['title']: m['value'] for m in results.metrics['Risk Metrics']}
             trade_metrics = {m['title']: m['value'] for m in results.metrics['Trading Statistics']}
 
+            timestamps = [int(pd.Timestamp(t).timestamp() * 1000) for t in results.equity_curve.index]
+
+
             symbol_results_data[symbol] = {
                 'trades': [{
                     'timestamp': pd.Timestamp(trade['timestamp']).strftime('%Y-%m-%d %H:%M') if isinstance(trade['timestamp'], str) 
@@ -205,8 +208,8 @@ class MultiSymbolBacktestReport:
                     ]
                 },
                 'total_return': float(perf_metrics['Total Return'].strip('%')),
-                'equity_curve': [[int(pd.Timestamp(t).timestamp() * 1000), float(v)] 
-                               for t, v in results.equity_curve.items()],
+                'equity_curve': [[ts, float(v)] for ts, v in zip(timestamps, results.equity_curve.values)],
+                'benchmark_curve': [[ts, float(v)] for ts, v in zip(timestamps, results.benchmark_data['value'].values)],
                 'drawdown': [[int(pd.Timestamp(t).timestamp() * 1000), float(v)] 
                             for t, v in results.drawdown.items()],
                 'monthly_returns': [[int(pd.Timestamp(t).timestamp() * 1000), float(v)] 

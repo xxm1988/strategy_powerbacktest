@@ -1050,6 +1050,29 @@
                 transform: translateY(0) scale(1);
             }
         }
+
+        /* Modern Dashboard Theme */
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            padding: 1.5rem;
+            background: linear-gradient(to bottom right, #f8fafc, #f1f5f9);
+        }
+
+        .metric-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            box-shadow: 
+                0 4px 6px -1px rgba(0, 0, 0, 0.1),
+                0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: transform 0.2s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-2px);
+        }
     </style>
 </head>
 <body>
@@ -1400,14 +1423,14 @@
                 // Equity Curve
                 Highcharts.chart('equity-{{ symbol|replace('.', '-') }}', {
                     chart: { type: 'area' },
-                    title: { text: '{{ symbol }} Equity Curve' },
+                    title: { text: '{{ symbol }} Performance Comparison' },
                     xAxis: { type: 'datetime' },
                     yAxis: { 
                         title: { text: 'Value ($)' },
                         labels: { formatter: function() { return '$' + this.value.toLocaleString(); } }
                     },
                     series: [{
-                        name: 'Equity',
+                        name: 'Strategy',
                         data: {{ results.equity_curve|tojson }},
                         color: '#3498db',
                         fillColor: {
@@ -1418,14 +1441,42 @@
                                 [0, Highcharts.color('#3498db').setOpacity(0.3).get('rgba')],
                                 [1, Highcharts.color('#3498db').setOpacity(0).get('rgba')]
                             ]
-                        }
+                        },
+                        zIndex: 2
+                    }, 
+                    {
+                        name: 'Buy & Hold',
+                        data: {{ results.benchmark_curve|tojson }},
+                        type: 'line',  // Changed from area to line
+                        color: '#34495e',  // Darker color for better contrast
+                        lineWidth: 2,
+                        dashStyle: 'ShortDot',  // More subtle dash style
+                        marker: {
+                            enabled: false
+                        },
+                        states: {
+                            hover: {
+                                lineWidth: 3
+                            }
+                        },
+                        zIndex: 1
                     }],
                     tooltip: {
                         valuePrefix: '$',
-                        valueDecimals: 2
+                        valueDecimals: 2,
+                        shared: true  // Show both values in tooltip
+                    },
+                    legend: {
+                        enabled: true,
+                        align: 'right',
+                        verticalAlign: 'top',
+                        layout: 'vertical',
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        borderRadius: 8,
+                        padding: 12,
+                        shadow: false
                     }
                 });
-
 
                 // Drawdown Chart
                 Highcharts.chart('drawdown-{{ symbol|replace('.', '-') }}', {

@@ -14,6 +14,7 @@ class SymbolResults:
     monthly_returns: pd.DataFrame
     trade_annotations: List[Dict[str, Any]]
     portfolio: pd.DataFrame
+    benchmark_data: pd.DataFrame
 
     @classmethod
     def from_backtest_report(cls, report: BacktestReport) -> 'SymbolResults':
@@ -26,5 +27,6 @@ class SymbolResults:
             drawdown=report._calculate_drawdowns(),
             monthly_returns=report.monthly_returns,
             trade_annotations=report._prepare_trade_annotations(),
-            portfolio=report.portfolio
+            portfolio=report.portfolio,
+            benchmark_data=report.benchmark_data
         ) 

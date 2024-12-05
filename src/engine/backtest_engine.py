@@ -16,6 +16,7 @@ from .metrics.risk_metrics import RiskMetrics
 from .metrics.trade_metrics import TradeMetrics
 from .multi_symbol_backtest_report import MultiSymbolBacktestReport
 from .symbol_results import SymbolResults
+from .benchmark_portfolio import BenchmarkPortfolio
 
 @dataclass
 class TradeExecution:
@@ -77,6 +78,10 @@ class BacktestEngine:
         
         metrics = self._calculate_metrics()
         metrics['fundamental_data'] = fundamental_data  # Add fundamental data to metrics
+
+        # Calculate benchmark data
+        benchmark_portfolio = BenchmarkPortfolio(self.initial_capital, self.lot_size)
+        metrics['benchmark_data'] = benchmark_portfolio.calculate_buy_and_hold(data)
         
         self._log_backtest_summary(metrics)
         

@@ -58,6 +58,8 @@ class BacktestReport:
             monthly_returns (pd.DataFrame): Monthly return statistics
         Fundamental Data:
             fundamental_data (FundamentalData): Company fundamental data
+        Benchmark Data:
+            benchmark_data (pd.DataFrame): Benchmark portfolio value history
     """
     # Basic Info
     strategy_name: str
@@ -106,6 +108,7 @@ class BacktestReport:
     trades: List[Dict[str, Any]]
     monthly_returns: pd.DataFrame
     fundamental_data: FundamentalData
+    benchmark_data: pd.DataFrame
 
     @classmethod
     def from_backtest_results(
@@ -163,7 +166,8 @@ class BacktestReport:
             portfolio=portfolio,
             trades=trades,
             monthly_returns=metrics['monthly_returns'],
-            fundamental_data=metrics['fundamental_data']
+            fundamental_data=metrics['fundamental_data'],
+            benchmark_data=metrics['benchmark_data']
         )
 
     def generate_report(self, output_dir: str) -> None:
