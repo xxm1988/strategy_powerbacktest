@@ -62,7 +62,7 @@ def create_cli_parser() -> ArgumentParser:
         '--timeframe',
         type=str,
         default='DAY',
-        choices=['1M', '3M', '5M', '15M', '30M', '60M', '4H', 'DAY', 'WEEK', 'MON'],
+        choices=['1M', '3M', '5M', '15M', '30M', '60M', '2H', '4H', 'DAY', 'WEEK', 'MON'],
         help='K-line timeframe for backtesting'
     )
         

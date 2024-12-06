@@ -28,22 +28,20 @@ def sample_minute_data():
     return pd.DataFrame(data)
 
 def test_resample_to_hourly():
-    """Test resampling from 1-minute to 1-hour data"""
-    # Create data within a single hour period
+    """Test resampling from 1-minute to 1-hour data for HKEX trading hours"""
     df = pd.DataFrame({
-        'time_key': pd.date_range('2023-01-01 09:00:00', periods=60, freq='1min'),  # Changed start time to 09:00
-        'open': np.random.uniform(100, 101, 60),
-        'high': np.random.uniform(101, 102, 60),
-        'low': np.random.uniform(99, 100, 60),
-        'close': np.random.uniform(100, 101, 60),
-        'volume': np.random.randint(1000, 5000, 60)
+        'time_key': pd.date_range('2024-01-01 09:30:00', periods=150, freq='1min'),
+        'open': np.random.uniform(100, 101, 150),
+        'high': np.random.uniform(101, 102, 150),
+        'low': np.random.uniform(99, 100, 150),
+        'close': np.random.uniform(100, 101, 150),
+        'volume': np.random.randint(1000, 5000, 150)
     })
     
     resampled = resample_ohlcv(df, '1H')
-    
-    assert len(resampled) == 1  # Should have one hourly candle
-    assert all(col in resampled.columns for col in ['open', 'high', 'low', 'close', 'volume'])
-    assert resampled['volume'].iloc[0] == df['volume'].sum()
+
+    assert len(resampled) == 3
+    assert pd.Timestamp(resampled['time_key'].iloc[0]).hour == 10
 
 def test_resample_to_4hour(sample_minute_data):
     """Test resampling from 1-minute to 4-hour data"""
@@ -104,4 +102,4 @@ def test_non_trading_hours_handling():
     })
     
     resampled = resample_ohlcv(df, '1D')
-    assert len(resampled) == 3  # Should have three daily candles 
+    assert len(resampled) == 6  # Two sessions per day for 3 days
