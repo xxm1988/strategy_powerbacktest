@@ -19,7 +19,8 @@ class BacktestConfig:
     end_date: datetime
     initial_capital: float
     commission: float
-    slippage: float = 0.0001  # Default value if not provided
+    slippage: float
+    timeframe: str
 
 class BacktestRunner:
     """
@@ -60,7 +61,8 @@ class BacktestRunner:
             data_dict[symbol] = self.data_fetcher.fetch_historical_data(
                 symbol=symbol,
                 start=config.start_date,
-                end=config.end_date
+                end=config.end_date,
+                timeframe=config.timeframe
             )
         
         # Create strategy

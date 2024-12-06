@@ -57,7 +57,15 @@ def create_cli_parser() -> ArgumentParser:
         type=float,
         help='Commission rate (e.g., 0.001 for 0.1%%)'
     )
-    
+
+    parser.add_argument(
+        '--timeframe',
+        type=str,
+        default='DAY',
+        choices=['1M', '3M', '5M', '15M', '30M', '60M', '4H', 'DAY', 'WEEK', 'MON'],
+        help='K-line timeframe for backtesting'
+    )
+        
     return parser
 
 def get_backtest_config(args: Any, config: Config) -> Dict[str, Any]:
@@ -91,6 +99,9 @@ def get_backtest_config(args: Any, config: Config) -> Dict[str, Any]:
     
     if args.commission:
         backtest_params['commission'] = args.commission
+    
+    if args.timeframe:
+        backtest_params['timeframe'] = args.timeframe
     
     # Add strategy parameters if provided in config
     strategy_params = config.get_strategy_params(backtest_params['strategy_name'])
