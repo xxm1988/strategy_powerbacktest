@@ -40,16 +40,6 @@ def resample_ohlcv(df: pd.DataFrame, timeframe: str) -> pd.DataFrame:
                 return pd.Timestamp(timestamp.date()) + pd.Timedelta(hours=15)
             else:
                 return pd.Timestamp(timestamp.date()) + pd.Timedelta(hours=16)
-        elif timeframe == '1H':
-            # Hourly candles
-            next_hour = timestamp.hour + 1
-            return pd.Timestamp(timestamp.date()) + pd.Timedelta(hours=next_hour)
-        elif timeframe == '1D':
-            # Daily candles - two sessions per day (morning and afternoon)
-            if timestamp.hour < 12:
-                return pd.Timestamp(timestamp.date()) + pd.Timedelta(hours=12)  # Morning session
-            else:
-                return pd.Timestamp(timestamp.date()) + pd.Timedelta(hours=16)  # Afternoon session
         else:
             raise ValueError(f"Unsupported timeframe for custom sessions: {timeframe}")
     

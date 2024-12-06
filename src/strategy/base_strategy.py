@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import pandas as pd
 import numpy as np
+import logging
 
 class BaseStrategy(ABC):
     def __init__(self, parameters: Dict[str, Any] = None):
@@ -9,6 +10,7 @@ class BaseStrategy(ABC):
         self.position = 0
         self.signals = []
         self.lot_size = parameters.get('lot_size', 1)  # Default lot size
+        self.logger = logging.getLogger(self.__class__.__name__)
         
     def set_lot_size(self, lot_size: int):
         """Set the lot size for the stock"""

@@ -70,3 +70,40 @@ class FutuDataFetcher:
         except Exception as e:
             logger.error(f"Error fetching historical data: {str(e)}")
             raise 
+
+    def get_trading_calendar(self, start_date: datetime, end_date: datetime) -> pd.DatetimeIndex:
+        """
+        Get trading calendar between start and end dates using Futu OpenAPI
+        
+        Args:
+            start_date: Start date for calendar
+            end_date: End date for calendar
+            
+        Returns:
+            DatetimeIndex of trading days
+        """
+        try:
+            # Convert dates to string format required by Futu API
+            start_str = start_date.strftime('%Y-%m-%d')
+            end_str = end_date.strftime('%Y-%m-%d')
+            
+            # Request trading days from Futu API
+            ret_code, data = self.quote_ctx.request_trading_days(
+                market=TrdMarket.HK,  # Hong Kong market
+                start_date=start_str,
+                end_date=end_str
+            )
+            
+            if ret_code != RET_OK:
+                self.logger.error(f"Failed to fetch trading calendar: {data}")
+                return pd.DatetimeIndex([])
+            
+            # Convert to DatetimeIndex and sort
+            calendar = pd.DatetimeIndex(data['trading_days']).sort_values()
+            
+            return calendar
+            
+        except Exception as e:
+            self.logger.error(f"Error getting trading calendar: {str(e)}")
+            return pd.DatetimeIndex([])
+

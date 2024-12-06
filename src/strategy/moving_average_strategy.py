@@ -35,9 +35,10 @@ Notes:
 from typing import Dict, Any
 import pandas as pd
 from .base_strategy import BaseStrategy
+from .warmup_period_mixin import WarmupPeriodMixin
 
 
-class MovingAverageCrossStrategy(BaseStrategy):
+class MovingAverageCrossStrategy(BaseStrategy, WarmupPeriodMixin):
     def __init__(self, parameters: Dict[str, Any] = None):
         """
         Initialize the Moving Average Cross Strategy.
@@ -51,9 +52,10 @@ class MovingAverageCrossStrategy(BaseStrategy):
         Raises:
             ValueError: If short_window >= long_window
         """
-        super().__init__(parameters)
+        BaseStrategy.__init__(self, parameters)
         self.short_window = parameters.get('short_window', 20)
         self.long_window = parameters.get('long_window', 50)
+        WarmupPeriodMixin.__init__(self)
         
         # Validate parameters
         if self.short_window >= self.long_window:
@@ -61,6 +63,11 @@ class MovingAverageCrossStrategy(BaseStrategy):
                 f"Short window ({self.short_window}) must be less than "
                 f"long window ({self.long_window})"
             )
+    
+    def calculate_warmup_period(self) -> int:
+        """Calculate required warmup period"""
+        return self.long_window  # Longest MA period needed
+  
         
     def calculate_indicators(self, data: pd.DataFrame) -> pd.DataFrame:
         """
@@ -110,6 +117,12 @@ class MovingAverageCrossStrategy(BaseStrategy):
         Returns:
             pd.Series: Trading signals aligned with the input data's index
         """
+        if not self.is_warmed_up(len(data)):
+            self.logger.warning(
+                f"Insufficient data for warmup. Need {self._warmup_period} periods, "
+                f"got {len(data)}"
+            )
+            
         # Calculate technical indicators
         data = self.calculate_indicators(data)
         
@@ -122,7 +135,7 @@ class MovingAverageCrossStrategy(BaseStrategy):
         # Generate sell signals
         signals[data['SMA_short'] < data['SMA_long']] = -1
         
-        return signals
+        return self.get_valid_signals(signals)
 
     def validate_parameters(self) -> bool:
         """
