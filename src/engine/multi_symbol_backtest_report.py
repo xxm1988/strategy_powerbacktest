@@ -65,17 +65,39 @@ class MultiSymbolBacktestReport:
             'correlation_matrix': self._calculate_correlation_matrix()
         }
 
-    def _calculate_correlation_matrix(self) -> pd.DataFrame:
-        """Calculate correlation matrix between symbols"""
-        # Create DataFrame with equity curves for all symbols
-        equity_curves = pd.DataFrame({
-            symbol: results.equity_curve
-            for symbol, results in self.symbol_results.items()
-        })
+    def _calculate_correlation_matrix(self, method: str = 'pearson', min_periods: int = 30) -> pd.DataFrame:
+        """Calculate correlation matrix between symbols using log returns
         
-        # Calculate returns correlation
-        returns = equity_curves.pct_change().dropna()
-        return returns.corr()
+        Args:
+            method: Correlation method ('pearson', 'spearman', or 'kendall')
+            min_periods: Minimum number of overlapping periods required
+            
+        Returns:
+            DataFrame containing the correlation matrix
+        """
+        try:
+            # Create DataFrame with equity curves for all symbols
+            equity_curves = pd.DataFrame({
+                symbol: results.equity_curve
+                for symbol, results in self.symbol_results.items()
+            })
+            
+            # Calculate log returns
+            log_returns = np.log(equity_curves / equity_curves.shift(1)).dropna()
+            
+            # Calculate correlation matrix with minimum periods requirement
+            correlation_matrix = log_returns.corr(method=method, min_periods=min_periods)
+            
+            # Replace any remaining NaN values with 0
+            correlation_matrix = correlation_matrix.fillna(0)
+            
+            return correlation_matrix
+            
+        except Exception as e:
+            logging.error(f"Error calculating correlation matrix: {e}")
+            # Return empty correlation matrix in case of error
+            symbols = list(self.symbol_results.keys())
+            return pd.DataFrame(0, index=symbols, columns=symbols)
 
     def _prepare_correlation_data(self) -> List[List]:
         """Prepare correlation data for heatmap visualization"""

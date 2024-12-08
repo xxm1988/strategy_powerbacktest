@@ -1888,28 +1888,39 @@
             
             // Helper function to find metric value by title
             function getMetricValue(metricGroup, titlePattern) {
-                const metric = metrics[metricGroup].find(m => m.title.toLowerCase().includes(titlePattern.toLowerCase()));
-                return metric ? parseFloat(metric.value) : 0;
+                const metric = metrics[metricGroup].find(m => m.title === titlePattern);
+                if (!metric) return 0;
+                
+                // Handle percentage values
+                const value = metric.value.toString();
+                if (value.includes('%')) {
+                    return parseFloat(value.replace('%', '')) / 100;
+                }
+                // Handle dollar values
+                if (value.includes('$')) {
+                    return parseFloat(value.replace('$', '').replace(',', ''));
+                }
+                return parseFloat(value);
             }
 
             const data = {
                 labels: [
                     'Sharpe Ratio',
                     'Sortino Ratio',
-                    'Max Drawdown',
                     'Win Rate',
+                    'Max Drawdown',
                     'Profit Factor',
-                    'Recovery Factor'
+                    'Volatility'
                 ],
                 datasets: [{
                     label: symbol,
                     data: [
-                        getMetricValue('Risk Metrics', 'Sharpe'),
-                        getMetricValue('Risk Metrics', 'Sortino'),
-                        getMetricValue('Risk Metrics', 'Max Drawdown') * -1,
+                        getMetricValue('Performance Metrics', 'Sharpe Ratio'),
+                        getMetricValue('Performance Metrics', 'Sortino Ratio'),
                         getMetricValue('Trading Statistics', 'Win Rate'),
+                        getMetricValue('Risk Metrics', 'Max Drawdown'),
                         getMetricValue('Trading Statistics', 'Profit Factor'),
-                        getMetricValue('Risk Metrics', 'Recovery')
+                        getMetricValue('Risk Metrics', 'Volatility')
                     ],
                     fill: true,
                     backgroundColor: 'rgba(59, 130, 246, 0.2)',
