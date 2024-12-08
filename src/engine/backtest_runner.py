@@ -55,30 +55,37 @@ class BacktestRunner:
         Raises:
             ValueError: If strategy creation fails
         """
-        # Fetch data for all symbols in parallel
-        data_dict = {}
-        for symbol in config.symbols:
-            data_dict[symbol] = self.data_fetcher.fetch_historical_data(
-                symbol=symbol,
-                start=config.start_date,
-                end=config.end_date,
-                timeframe=config.timeframe
-            )
-        
         # Create strategy
         strategy = StrategyFactory.create_strategy(
             config.strategy_name,
             config.strategy_params
         )
+
+        warmup_periods = strategy.get_required_warmup_period()
+
+        # Fetch data for all symbols in parallel
+        data_dict = {}
+        for symbol in config.symbols:
+            data_dict[symbol] = self.data_fetcher.fetch_data(
+            symbol=symbol,
+            start_date=config.start_date,
+            end_date=config.end_date,
+            timeframe=config.timeframe,
+            warmup_periods=warmup_periods
+        )
+        
+         # Fetch lot size and fundamental data
+        lot_size = self.data_fetcher.fetch_lot_size(symbol)
         
         # Initialize and run backtest engine
         engine = BacktestEngine(
             strategy=strategy,
             initial_capital=config.initial_capital,
-            commission=config.commission
+            commission=config.commission,
+            lot_size=lot_size
         )
         
-        results = engine.run_multi_symbol(data_dict)
+        results = engine.run_multi_symbol(data_dict, config.start_date, config.end_date)
         
         # Generate report
         output_dir = os.path.join(os.getcwd(), 'reports')

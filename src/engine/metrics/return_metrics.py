@@ -30,9 +30,14 @@ class ReturnMetrics:
     @staticmethod
     def calculate_monthly_returns(portfolio: pd.DataFrame) -> pd.DataFrame:
         """Calculate monthly returns from portfolio data"""
-        monthly_returns = portfolio['returns'].resample('ME').apply(
-            lambda x: (1 + x).prod() - 1
+        # Calculate monthly returns using the returns column
+        monthly_returns = portfolio['returns'].resample('M').apply(
+            lambda x: (1 + x).prod() - 1  # Compound daily returns to get monthly return
         )
+        
+        # Shift the index back by one month to align with actual trading months
+        monthly_returns.index = monthly_returns.index.shift(-1, freq='M')
+        
         return pd.DataFrame({'returns': monthly_returns})
     
     @staticmethod

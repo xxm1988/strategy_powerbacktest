@@ -95,6 +95,13 @@ class MovingAverageCrossStrategy(BaseStrategy):
         
         return data
         
+    def get_required_warmup_period(self) -> int:
+        """
+        Get the required warmup period for the strategy.
+        For MA strategy, we need max(long_window, short_window) periods
+        """
+        return max(self.long_window, self.short_window)
+        
     def generate_signals(self, data: pd.DataFrame) -> pd.Series:
         """
         Generate trading signals based on moving average crossovers.
@@ -111,16 +118,11 @@ class MovingAverageCrossStrategy(BaseStrategy):
         Returns:
             pd.Series: Trading signals aligned with the input data's index
         """
-        # Calculate technical indicators
-        data = self.calculate_indicators(data)
-        
-        # Initialize signals series with holds (0)
+        # No need to handle warmup here since it's handled by prepare_data
         signals = pd.Series(0, index=data.index)
         
-        # Generate buy signals
+        # Generate signals using the clean data
         signals[data['SMA_short'] > data['SMA_long']] = 1
-        
-        # Generate sell signals
         signals[data['SMA_short'] < data['SMA_long']] = -1
         
         return signals

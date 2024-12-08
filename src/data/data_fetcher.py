@@ -17,7 +17,7 @@ class FutuDataFetcher:
     def __del__(self):
         self.quote_ctx.close()
         
-    def fetch_historical_data(
+    def _fetch_historical_data(
         self,
         symbol: str,
         start: datetime,
@@ -104,6 +104,106 @@ class FutuDataFetcher:
             return calendar
             
         except Exception as e:
-            self.logger.error(f"Error getting trading calendar: {str(e)}")
+            logger.error(f"Error getting trading calendar: {str(e)}")
             return pd.DatetimeIndex([])
+
+    def fetch_lot_size(self, symbol: str) -> int:
+        """
+        Fetch lot size for a given symbol from Futu API
+        
+        Args:
+            symbol: Stock symbol
+            
+        Returns:
+            int: Lot size for the symbol
+        """
+        try:
+            ret_code, data = self.quote_ctx.get_market_snapshot([symbol])
+            if ret_code != RET_OK:
+                logger.error(f"Failed to fetch lot size for {symbol}: {data}")
+                return 1  # Default lot size
+            
+            return int(data['lot_size'][0])
+            
+        except Exception as e:
+            logger.error(f"Error fetching lot size for {symbol}: {str(e)}")
+            return 1  # Default lot size
+
+    def fetch_fundamental_data(self, symbol: str) -> Dict[str, Any]:
+        """
+        Fetch fundamental data for a given symbol from Futu API
+        
+        Args:
+            symbol: Stock symbol
+            
+        Returns:
+            Dict containing fundamental data
+        """
+        try:
+            # Fetch basic information
+            ret_code, snapshot_data = self.quote_ctx.get_market_snapshot([symbol])
+            if ret_code != RET_OK:
+                logger.error(f"Failed to fetch market snapshot for {symbol}: {snapshot_data}")
+                return {}
+            
+            # Fetch company information
+            ret_code, company_data = self.quote_ctx.get_stock_basicinfo(
+                Market.HK, 
+                SecurityType.STOCK, 
+                [symbol]
+            )
+            if ret_code != RET_OK:
+                logger.error(f"Failed to fetch company data for {symbol}: {company_data}")
+                return {}
+            
+            # Extract and combine data
+            fundamental_data = {
+                'market_cap': float(snapshot_data['market_cap'][0]),
+                'pe_ratio': float(snapshot_data['pe_ratio'][0]),
+                'pb_ratio': float(snapshot_data['pb_ratio'][0]),
+                'dividend_yield': float(snapshot_data['dividend_ratio'][0]),
+                'lot_size': int(snapshot_data['lot_size'][0]),
+                'stock_name': company_data['name'][0],
+                'stock_type': company_data['stock_type'][0],
+                'listing_date': company_data['listing_date'][0],
+                'total_shares': float(company_data['total_shares'][0]),
+                'float_shares': float(company_data['float_shares'][0]),
+                'current_price': float(snapshot_data['last_price'][0]),
+                'fifty_two_week_high': float(snapshot_data['high_price'][0]),
+                'fifty_two_week_low': float(snapshot_data['low_price'][0]),
+                'avg_volume_3m': float(snapshot_data['volume_3m'][0]),
+                'industry': company_data['industry'][0]
+            }
+            
+            return fundamental_data
+            
+        except Exception as e:
+            logger.error(f"Error fetching fundamental data for {symbol}: {str(e)}")
+            return {}
+
+    def fetch_data(self, symbol: str, start_date: datetime, end_date: datetime, 
+                   timeframe: str, warmup_periods: int = 0) -> pd.DataFrame:
+        """
+        Fetch data with warmup period included, always requesting extra 100 days
+        
+        Args:
+            symbol: Stock symbol
+            start_date: Start date for trading period
+            end_date: End date for trading period
+            timeframe: Data timeframe
+            warmup_periods: Number of additional periods needed before start_date (ignored)
+            
+        Returns:
+            DataFrame with warmup period included
+        """
+        # Always request 100 extra days of data
+        adjusted_start = start_date - pd.Timedelta(days=100)
+        
+        # Fetch data including warmup period
+        data = self._fetch_historical_data(symbol, adjusted_start, end_date, timeframe)
+        
+        if data is None or data.empty:
+            raise ValueError(f"No data available for {symbol}")
+            
+        return data
 

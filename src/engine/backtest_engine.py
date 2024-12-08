@@ -5,12 +5,9 @@ import numpy as np
 from datetime import datetime
 from logging import Logger
 from src.strategy.base_strategy import BaseStrategy
-from src.data.data_fetcher import FutuDataFetcher
 from src.utils.logger import setup_logger
 from .backtest_report import BacktestReport
 from .portfolio import Portfolio
-from futu import OpenQuoteContext
-from .fundamental_data import FundamentalData
 from .metrics.return_metrics import ReturnMetrics
 from .metrics.risk_metrics import RiskMetrics
 from .metrics.trade_metrics import TradeMetrics
@@ -43,6 +40,7 @@ class BacktestEngine:
         strategy: BaseStrategy,
         initial_capital: float = 100000.0,
         commission: float = 0.001,
+        lot_size: int = 1,
         logger: Optional[Logger] = None
     ):
         """
@@ -60,31 +58,39 @@ class BacktestEngine:
         self.portfolio = pd.DataFrame()
         self.trades: List[TradeExecution] = []
         self.logger = logger or setup_logger(__name__)
-        self.lot_size = 1
+        self.lot_size = lot_size
         self.symbol: Optional[str] = None
         
-    def run(self, data: pd.DataFrame, symbol: str) -> BacktestReport:
+    def run(self, data: pd.DataFrame, symbol: str, start_date: datetime, end_date: datetime) -> BacktestReport:
         """Execute backtest for the given data and symbol."""
-        self.lot_size = self.fetch_lot_size(symbol)
         self.symbol = symbol
         self._log_backtest_start(data, symbol)
         
-        # Fetch fundamental data
-        fundamental_data = self.fetch_fundamental_data(symbol)
+        # Calculate indicators with warmup period
+        full_data, trading_data = self.strategy.prepare_data(
+            data,
+            start_date=start_date,
+            end_date=end_date
+        )
         
-        signals = self.strategy.generate_signals(data)
-        self.portfolio = self._calculate_portfolio(data, signals)
-        self.trades = self._generate_trades_list(data, signals)
+        # Generate signals only on the trading data (post-warmup)
+        signals = self.strategy.generate_signals(trading_data)
+
+        # Calculate portfolio metrics excluding warmup period
+        self.portfolio = self._calculate_portfolio(trading_data, signals)
+        self.trades = self._generate_trades_list(trading_data, signals)
         
+        # Calculate comprehensive backtest metrics
         metrics = self._calculate_metrics()
-        metrics['fundamental_data'] = fundamental_data  # Add fundamental data to metrics
 
         # Calculate benchmark data
         benchmark_portfolio = BenchmarkPortfolio(self.initial_capital, self.lot_size)
         metrics['benchmark_data'] = benchmark_portfolio.calculate_buy_and_hold(data)
         
+        # Log final results
         self._log_backtest_summary(metrics)
         
+        # Generate backtest report
         return BacktestReport.from_backtest_results(
             portfolio=self.portfolio,
             trades=self.trades,
@@ -189,18 +195,6 @@ class BacktestEngine:
         
         return portfolio
         
-    def _calculate_monthly_returns(self) -> pd.DataFrame:
-        """Calculate monthly returns from portfolio values"""
-        # Resample portfolio values to monthly frequency and calculate returns
-        monthly_values = self.portfolio['total'].resample('M').last()
-        monthly_returns = monthly_values.pct_change()
-        
-        # Create DataFrame with proper formatting
-        returns_df = pd.DataFrame({
-            'returns': monthly_returns
-        })
-        
-        return returns_df
 
     def _calculate_metrics(self) -> Dict[str, Any]:
         """Calculate comprehensive backtest metrics using metric classes"""
@@ -348,64 +342,7 @@ class BacktestEngine:
         
         return trades
         
-    def fetch_lot_size(self, symbol: str) -> int:
-        """Fetch lot size from Futu OpenD"""
-        quote_ctx = OpenQuoteContext(host='127.0.0.1', port=11111)
-        ret, data = quote_ctx.get_market_snapshot([symbol])
-        quote_ctx.close()
-        
-        if ret == 0:
-            return data['lot_size'][0]
-        return 1  # Default to 1 if unable to fetch
-        
-    def fetch_fundamental_data(self, symbol: str) -> FundamentalData:
-        """Fetch fundamental data from Futu OpenD"""
-        quote_ctx = OpenQuoteContext(host='127.0.0.1', port=11111)
-        
-        try:
-            # Get market snapshot for price and basic metrics
-            ret, snapshot = quote_ctx.get_market_snapshot([symbol])
-            if ret != 0:
-                raise ValueError(f"Failed to fetch market snapshot: {snapshot}")
-            
-            # Get stock basic info
-            ret, static_info = quote_ctx.get_stock_basicinfo(
-                market='HK', 
-                stock_type='STOCK', 
-                code_list=[symbol]
-            )
-            if ret != 0:
-                raise ValueError(f"Failed to fetch static info: {static_info}")
-            
-            # Extract data from responses
-            snapshot_data = snapshot.iloc[0]
-            static_data = static_info.iloc[0]
-            
-            return FundamentalData(
-                market_cap=snapshot_data.get('market_cap', 0),
-                pe_ratio=snapshot_data.get('pe_ratio', 0),
-                pb_ratio=snapshot_data.get('pb_ratio', 0),
-                dividend_yield=snapshot_data.get('dividend_ratio', 0),
-                industry=static_data.get('industry', 'N/A'),
-                lot_size=snapshot_data.get('lot_size', 0),
-                stock_name=static_data.get('name', 'N/A'),
-                stock_type=static_data.get('stock_type', 'N/A'),
-                listing_date=static_data.get('listing_date', 'N/A'),
-                total_shares=static_data.get('total_shares', 0),
-                float_shares=static_data.get('float_shares', 0),
-                current_price=snapshot_data.get('last_price', 0),
-                fifty_two_week_high=snapshot_data.get('highest52weeks_price', 0),
-                fifty_two_week_low=snapshot_data.get('lowest52weeks_price', 0),
-                avg_volume_3m=snapshot_data.get('volume_ratio', 0),
-                # Set optional fields to None since they're not available
-                eps=None,
-                net_profit_ttm=None,
-                net_profit_growth_ttm=None
-            )
-        finally:
-            quote_ctx.close()
-        
-    def run_multi_symbol(self, data_dict: Dict[str, pd.DataFrame]) -> MultiSymbolBacktestReport:
+    def run_multi_symbol(self, data_dict: Dict[str, pd.DataFrame], start_date: datetime, end_date: datetime) -> MultiSymbolBacktestReport:
         """
         Execute backtest for multiple symbols.
         
@@ -419,7 +356,7 @@ class BacktestEngine:
         
         for symbol, data in data_dict.items():
             # Run individual backtest for each symbol
-            report = self.run(data, symbol)
+            report = self.run(data, symbol, start_date, end_date)
             symbol_results[symbol] = SymbolResults.from_backtest_report(report)
         
         # Create multi-symbol report
