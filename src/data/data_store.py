@@ -7,15 +7,17 @@ from ..utils.logger import setup_logger
 
 logger = setup_logger(__name__)
 
+
 class DataStore:
     """
     Handles storage and retrieval of historical market data.
     Supports both in-memory and persistent storage.
     """
+
     def __init__(self, db_path: Optional[str] = None):
         self.db_path = db_path
         self.in_memory_store: Dict[str, pd.DataFrame] = {}
-        
+
         if db_path:
             self._initialize_db()
 
@@ -23,7 +25,8 @@ class DataStore:
         """Initialize SQLite database with required tables"""
         try:
             with sqlite3.connect(self.db_path) as conn:
-                conn.execute("""
+                conn.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS market_data (
                         symbol TEXT,
                         timestamp TEXT,
@@ -31,21 +34,18 @@ class DataStore:
                         interval TEXT,
                         PRIMARY KEY (symbol, timestamp, interval)
                     )
-                """)
+                """
+                )
         except Exception as e:
             logger.error(f"Failed to initialize database: {str(e)}")
             raise
 
     def save_data(
-        self,
-        symbol: str,
-        data: pd.DataFrame,
-        interval: str,
-        persistent: bool = True
+        self, symbol: str, data: pd.DataFrame, interval: str, persistent: bool = True
     ) -> None:
         """
         Save market data to storage.
-        
+
         Args:
             symbol: Market symbol
             data: DataFrame containing market data
@@ -71,32 +71,29 @@ class DataStore:
                                 symbol,
                                 row.name.isoformat(),
                                 json.dumps(row.to_dict()),
-                                interval
-                            )
+                                interval,
+                            ),
                         )
             except Exception as e:
                 logger.error(f"Failed to save data to database: {str(e)}")
                 raise
 
     def load_data(
-        self,
-        symbol: str,
-        interval: str,
-        use_cache: bool = True
+        self, symbol: str, interval: str, use_cache: bool = True
     ) -> Optional[pd.DataFrame]:
         """
         Load market data from storage.
-        
+
         Args:
             symbol: Market symbol
             interval: Time interval of the data
             use_cache: Whether to use in-memory cache
-            
+
         Returns:
             DataFrame containing market data or None if not found
         """
         key = f"{symbol}_{interval}"
-        
+
         # Try in-memory store first
         if use_cache and key in self.in_memory_store:
             return self.in_memory_store[key]
@@ -112,22 +109,22 @@ class DataStore:
                         ORDER BY timestamp
                     """
                     rows = conn.execute(query, (symbol, interval)).fetchall()
-                    
+
                     if not rows:
                         return None
-                        
+
                     data = []
                     for timestamp, json_data in rows:
                         row_data = json.loads(json_data)
                         data.append(row_data)
-                        
+
                     df = pd.DataFrame(data)
                     df.index = pd.to_datetime([row[0] for row in rows])
-                    
+
                     # Update cache
                     self.in_memory_store[key] = df
                     return df
-                    
+
             except Exception as e:
                 logger.error(f"Failed to load data from database: {str(e)}")
                 raise
@@ -136,4 +133,4 @@ class DataStore:
 
     def clear_cache(self) -> None:
         """Clear the in-memory cache"""
-        self.in_memory_store.clear() 
+        self.in_memory_store.clear()

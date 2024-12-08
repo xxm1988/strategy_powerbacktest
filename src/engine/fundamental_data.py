@@ -1,9 +1,11 @@
 from dataclasses import dataclass
 from typing import Optional
 
+
 @dataclass
 class FundamentalData:
     """Company fundamental data from Futu API"""
+
     market_cap: float
     pe_ratio: float
     pb_ratio: float
@@ -21,4 +23,4 @@ class FundamentalData:
     avg_volume_3m: float
     eps: Optional[float] = None
     net_profit_ttm: Optional[float] = None
-    net_profit_growth_ttm: Optional[float] = None 
+    net_profit_growth_ttm: Optional[float] = None

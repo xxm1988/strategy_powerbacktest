@@ -36,6 +36,7 @@ from typing import Dict, Any
 import pandas as pd
 from .base_strategy import BaseStrategy
 
+
 class MovingAverageCrossStrategy(BaseStrategy):
     def __init__(self, parameters: Dict[str, Any] = None):
         """
@@ -51,18 +52,18 @@ class MovingAverageCrossStrategy(BaseStrategy):
             ValueError: If short_window >= long_window
         """
         parameters = parameters or {}  # Ensure parameters is at least an empty dict
-        self.short_window = parameters.get('short_window', 20)
-        self.long_window = parameters.get('long_window', 50)
+        self.short_window = parameters.get("short_window", 20)
+        self.long_window = parameters.get("long_window", 50)
         self.validate_parameters()
         super().__init__(parameters)
-        
+
         # Validate parameters
         if self.short_window >= self.long_window:
             raise ValueError(
                 f"Short window ({self.short_window}) must be less than "
                 f"long window ({self.long_window})"
             )
-    
+
     def calculate_indicators(self, data: pd.DataFrame) -> pd.DataFrame:
         """
         Calculate technical indicators used by the strategy.
@@ -80,28 +81,36 @@ class MovingAverageCrossStrategy(BaseStrategy):
                 - SMA_long: Long-term simple moving average
         """
         data = data.copy()
-        
+
         # Calculate short-term moving average
-        data['SMA_short'] = data['close'].rolling(
-            window=self.short_window,
-            min_periods=1  # Allow partial windows at the start
-        ).mean()
-        
+        data["SMA_short"] = (
+            data["close"]
+            .rolling(
+                window=self.short_window,
+                min_periods=1,  # Allow partial windows at the start
+            )
+            .mean()
+        )
+
         # Calculate long-term moving average
-        data['SMA_long'] = data['close'].rolling(
-            window=self.long_window,
-            min_periods=1  # Allow partial windows at the start
-        ).mean()
-        
+        data["SMA_long"] = (
+            data["close"]
+            .rolling(
+                window=self.long_window,
+                min_periods=1,  # Allow partial windows at the start
+            )
+            .mean()
+        )
+
         return data
-        
+
     def get_required_warmup_period(self) -> int:
         """
         Get the required warmup period for the strategy.
         For MA strategy, we need max(long_window, short_window) periods
         """
         return max(self.long_window, self.short_window)
-        
+
     def generate_signals(self, data: pd.DataFrame) -> pd.Series:
         """
         Generate trading signals based on moving average crossovers.
@@ -120,11 +129,11 @@ class MovingAverageCrossStrategy(BaseStrategy):
         """
         # No need to handle warmup here since it's handled by prepare_data
         signals = pd.Series(0, index=data.index)
-        
+
         # Generate signals using the clean data
-        signals[data['SMA_short'] > data['SMA_long']] = 1
-        signals[data['SMA_short'] < data['SMA_long']] = -1
-        
+        signals[data["SMA_short"] > data["SMA_long"]] = 1
+        signals[data["SMA_short"] < data["SMA_long"]] = -1
+
         return signals
 
     def validate_parameters(self) -> bool:
