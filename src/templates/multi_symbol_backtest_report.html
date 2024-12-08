@@ -1082,6 +1082,42 @@
         .metric-card:hover {
             transform: translateY(-2px);
         }
+
+        .controls-section {
+            background: white;
+            padding: 1rem;
+            border-radius: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .select2-container {
+            min-width: 200px;
+        }
+
+        .trading-activity .card,
+        .performance-comparison .card {
+            border: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: transform 0.2s ease;
+        }
+
+        .trading-activity .card:hover,
+        .performance-comparison .card:hover {
+            transform: translateY(-2px);
+        }
+
+        .trade-analysis .card-body {
+            padding: 1.5rem;
+        }
+
+        .export-buttons .btn {
+            transition: all 0.2s ease;
+        }
+
+        .export-buttons .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
     </style>
 </head>
 <body>
@@ -1159,6 +1195,30 @@
                             <h3><i class="fas fa-project-diagram"></i> Symbol Correlation Matrix</h3>
                         </div>
                         <div id="correlationMatrix" class="chart-container"></div>
+                    </div>
+                </div>
+
+                <!-- Performance Comparison -->
+                <div class="performance-comparison mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-chart-line me-2"></i>Performance Comparison</h3>
+                        </div>
+                        <div class="card-body">
+                            <div id="performanceComparisonChart" style="height: 400px;"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Trading Activity Heatmap -->
+                <div class="trading-activity mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-calendar-alt me-2"></i>Trading Activity Heatmap</h3>
+                        </div>
+                        <div class="card-body">
+                            <div id="tradingHeatmap" style="height: 350px;"></div>
+                        </div>
                     </div>
                 </div>
 
@@ -1298,7 +1358,7 @@
                             </div>
                         </div>
                     </div>
-
+                    
                     <!-- Charts Section -->
                     <div class="charts-grid">
                         <div class="chart-container" data-aos="fade-up">
@@ -1888,39 +1948,28 @@
             
             // Helper function to find metric value by title
             function getMetricValue(metricGroup, titlePattern) {
-                const metric = metrics[metricGroup].find(m => m.title === titlePattern);
-                if (!metric) return 0;
-                
-                // Handle percentage values
-                const value = metric.value.toString();
-                if (value.includes('%')) {
-                    return parseFloat(value.replace('%', '')) / 100;
-                }
-                // Handle dollar values
-                if (value.includes('$')) {
-                    return parseFloat(value.replace('$', '').replace(',', ''));
-                }
-                return parseFloat(value);
+                const metric = metrics[metricGroup].find(m => m.title.toLowerCase().includes(titlePattern.toLowerCase()));
+                return metric ? parseFloat(metric.value) : 0;
             }
 
             const data = {
                 labels: [
                     'Sharpe Ratio',
                     'Sortino Ratio',
-                    'Win Rate',
                     'Max Drawdown',
+                    'Win Rate',
                     'Profit Factor',
-                    'Volatility'
+                    'Recovery Factor'
                 ],
                 datasets: [{
                     label: symbol,
                     data: [
-                        getMetricValue('Performance Metrics', 'Sharpe Ratio'),
-                        getMetricValue('Performance Metrics', 'Sortino Ratio'),
+                        getMetricValue('Risk Metrics', 'Sharpe'),
+                        getMetricValue('Risk Metrics', 'Sortino'),
+                        getMetricValue('Risk Metrics', 'Max Drawdown') * -1,
                         getMetricValue('Trading Statistics', 'Win Rate'),
-                        getMetricValue('Risk Metrics', 'Max Drawdown'),
                         getMetricValue('Trading Statistics', 'Profit Factor'),
-                        getMetricValue('Risk Metrics', 'Volatility')
+                        getMetricValue('Risk Metrics', 'Recovery')
                     ],
                     fill: true,
                     backgroundColor: 'rgba(59, 130, 246, 0.2)',
@@ -1964,6 +2013,158 @@
                 }
             });
         }
+        // Initialize Select2 for symbol filtering
+        $('.symbol-filter').select2({
+            placeholder: "Filter Symbols",
+            allowClear: true
+        });
+        
+        // Performance Comparison Chart
+        function initializePerformanceComparison(symbolResults) {
+            const series = Object.entries(symbolResults).map(([symbol, data]) => ({
+                name: symbol,
+                data: data.equity_curve.map(point => [point[0], point[1] / data.equity_curve[0][1] * 100 - 100])
+            }));
+        
+            Highcharts.stockChart('performanceComparisonChart', {
+                title: { text: 'Normalized Performance Comparison' },
+                yAxis: {
+                    labels: { format: '{value}%' },
+                    title: { text: 'Return (%)' }
+                },
+                series: series,
+                tooltip: {
+                    pointFormat: '<span style="color:{series.color}">{series.name}</span>: <b>{point.y:.2f}%</b><br/>',
+                    valueDecimals: 2
+                }
+            });
+        }
+        
+        // Trading Activity Heatmap
+        function initializeTradingHeatmap(symbolResults) {
+            // Initialize 2D array for day/hour combinations
+            const tradeCount = Array(7).fill(0).map(() => Array(24).fill(0));
+            
+            // Count trades for each day/hour combination
+            Object.entries(symbolResults).forEach(([symbol, data]) => {
+                data.trades.forEach(trade => {
+                    const date = new Date(trade.timestamp);
+                    const dayOfWeek = date.getDay(); // 0-6
+                    const hour = date.getHours(); // 0-23
+                    tradeCount[dayOfWeek][hour]++;
+                });
+            });
+            
+            // Convert to Highcharts format
+            const tradeData = [];
+            for (let day = 0; day < 7; day++) {
+                for (let hour = 0; hour < 24; hour++) {
+                    tradeData.push([day, hour, tradeCount[day][hour]]);
+                }
+            }
+
+            Highcharts.chart('tradingHeatmap', {
+                chart: {
+                    type: 'heatmap',
+                    height: 350, // Increased height
+                    marginTop: 40,
+                    marginBottom: 80,
+                    marginRight: 120 // More space for legend
+                },
+                title: {
+                    text: 'Trading Activity Distribution',
+                    style: {
+                        fontSize: '16px',
+                        fontWeight: '500'
+                    }
+                },
+                xAxis: {
+                    categories: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+                    title: {
+                        text: 'Day of Week',
+                        style: {
+                            fontSize: '13px'
+                        }
+                    },
+                    labels: {
+                        style: {
+                            fontSize: '12px'
+                        }
+                    }
+                },
+                yAxis: {
+                    categories: Array.from({length: 24}, (_, i) => 
+                        `${String(i).padStart(2, '0')}:00`
+                    ),
+                    title: {
+                        text: 'Hour of Day',
+                        style: {
+                            fontSize: '13px'
+                        }
+                    },
+                    labels: {
+                        style: {
+                            fontSize: '11px'
+                        }
+                    },
+                    reversed: true
+                },
+                colorAxis: {
+                    min: 0,
+                    minColor: '#FFFFFF',
+                    maxColor: '#206bc4',
+                    labels: {
+                        style: {
+                            fontSize: '11px'
+                        }
+                    }
+                },
+                legend: {
+                    align: 'right',
+                    layout: 'vertical',
+                    margin: 0,
+                    verticalAlign: 'top',
+                    y: 25,
+                    symbolHeight: 280,
+                    title: {
+                        text: 'Trades',
+                        style: {
+                            fontSize: '12px'
+                        }
+                    }
+                },
+                tooltip: {
+                    formatter: function () {
+                        return '<b>' + this.series.xAxis.categories[this.point.x] + '</b><br/>' +
+                            '<b>' + this.series.yAxis.categories[this.point.y] + '</b><br/>' +
+                            '<b>Trades: </b>' + this.point.value;
+                    }
+                },
+                series: [{
+                    name: 'Trading Activity',
+                    borderWidth: 1,
+                    data: tradeData,
+                    dataLabels: {
+                        enabled: true,
+                        color: '#000000',
+                        style: {
+                            fontSize: '10px',
+                            textOutline: 'none',
+                            fontWeight: '400'
+                        },
+                        formatter: function() {
+                            return this.point.value > 0 ? this.point.value : '';
+                        }
+                    }
+                }]
+            });
+        }
+    
+        // Initialize all charts
+        document.addEventListener('DOMContentLoaded', function() {
+            initializePerformanceComparison({{ symbol_results|tojson }});
+            initializeTradingHeatmap({{ symbol_results|tojson }});
+        });
     </script>
 </body>
 </html> 
