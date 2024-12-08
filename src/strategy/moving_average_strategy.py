@@ -50,9 +50,11 @@ class MovingAverageCrossStrategy(BaseStrategy):
         Raises:
             ValueError: If short_window >= long_window
         """
-        super().__init__(parameters)
+        parameters = parameters or {}  # Ensure parameters is at least an empty dict
         self.short_window = parameters.get('short_window', 20)
         self.long_window = parameters.get('long_window', 50)
+        self.validate_parameters()
+        super().__init__(parameters)
         
         # Validate parameters
         if self.short_window >= self.long_window:
@@ -140,16 +142,10 @@ class MovingAverageCrossStrategy(BaseStrategy):
         Returns:
             bool: True if parameters are valid, False otherwise
         """
-        if not isinstance(self.short_window, int) or self.short_window <= 0:
-            return False
-        if not isinstance(self.long_window, int) or self.long_window <= 0:
-            return False
+        if self.short_window <= 0:  # Add validation for zero
+            raise ValueError("short_window must be greater than 0")
+        if self.long_window <= 0:
+            raise ValueError("long_window must be greater than 0")
         if self.short_window >= self.long_window:
-            return False
-        
-        # Additional validation could include:
-        # - Maximum window sizes
-        # - Minimum window difference
-        # - Relationship to trading frequency
-        
+            raise ValueError("short_window must be less than long_window")
         return True
