@@ -35,10 +35,8 @@ Notes:
 from typing import Dict, Any
 import pandas as pd
 from .base_strategy import BaseStrategy
-from .warmup_period_mixin import WarmupPeriodMixin
 
-
-class MovingAverageCrossStrategy(BaseStrategy, WarmupPeriodMixin):
+class MovingAverageCrossStrategy(BaseStrategy):
     def __init__(self, parameters: Dict[str, Any] = None):
         """
         Initialize the Moving Average Cross Strategy.
@@ -52,10 +50,9 @@ class MovingAverageCrossStrategy(BaseStrategy, WarmupPeriodMixin):
         Raises:
             ValueError: If short_window >= long_window
         """
-        BaseStrategy.__init__(self, parameters)
+        super().__init__(parameters)
         self.short_window = parameters.get('short_window', 20)
         self.long_window = parameters.get('long_window', 50)
-        WarmupPeriodMixin.__init__(self)
         
         # Validate parameters
         if self.short_window >= self.long_window:
@@ -117,12 +114,6 @@ class MovingAverageCrossStrategy(BaseStrategy, WarmupPeriodMixin):
         Returns:
             pd.Series: Trading signals aligned with the input data's index
         """
-        if not self.is_warmed_up(len(data)):
-            self.logger.warning(
-                f"Insufficient data for warmup. Need {self._warmup_period} periods, "
-                f"got {len(data)}"
-            )
-            
         # Calculate technical indicators
         data = self.calculate_indicators(data)
         
@@ -135,7 +126,7 @@ class MovingAverageCrossStrategy(BaseStrategy, WarmupPeriodMixin):
         # Generate sell signals
         signals[data['SMA_short'] < data['SMA_long']] = -1
         
-        return self.get_valid_signals(signals)
+        return signals
 
     def validate_parameters(self) -> bool:
         """

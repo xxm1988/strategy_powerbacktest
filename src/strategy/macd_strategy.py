@@ -2,9 +2,7 @@ from typing import Dict
 import numpy as np
 import pandas as pd
 from .base_strategy import BaseStrategy
-from .warmup_period_mixin import WarmupPeriodMixin
-
-class MACDStrategy(BaseStrategy, WarmupPeriodMixin):
+class MACDStrategy(BaseStrategy):
     """
     MACD (Moving Average Convergence Divergence) Strategy
     Buy Signal: When MACD line crosses above Signal line (Golden Cross)
@@ -21,25 +19,17 @@ class MACDStrategy(BaseStrategy, WarmupPeriodMixin):
                 - slow_period: Period for slow EMA (default: 26)
                 - signal_period: Period for signal line (default: 9)
         """
-        BaseStrategy.__init__(self, params)
+        super().__init__(params)
         self.fast_period = params.get('fast_period', 12)
         self.slow_period = params.get('slow_period', 26)
         self.signal_period = params.get('signal_period', 9)
-        WarmupPeriodMixin.__init__(self)
-
         
     def calculate_warmup_period(self) -> int:
         """Calculate required warmup period for MACD"""
         # Need enough data for slow EMA + signal line
         return self.slow_period + self.signal_period
         
-    def generate_signals(self, data: pd.DataFrame) -> pd.Series:
-        if not self.is_warmed_up(len(data)):
-            self.logger.warning(
-                f"Insufficient data for MACD warmup. Need {self._warmup_period} periods, "
-                f"got {len(data)}"
-            )
-            
+    def generate_signals(self, data: pd.DataFrame) -> pd.Series:   
         # Calculate MACD components
         fast_ema = data['close'].ewm(span=self.fast_period, adjust=False).mean()
         slow_ema = data['close'].ewm(span=self.slow_period, adjust=False).mean()
@@ -59,4 +49,4 @@ class MACDStrategy(BaseStrategy, WarmupPeriodMixin):
                 signals[i] = -1  # Sell signal
         
         # Remove signals during warmup period
-        return self.get_valid_signals(signals) 
+        return signals
