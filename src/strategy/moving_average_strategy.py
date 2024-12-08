@@ -63,11 +63,6 @@ class MovingAverageCrossStrategy(BaseStrategy):
                 f"long window ({self.long_window})"
             )
     
-    def calculate_warmup_period(self) -> int:
-        """Calculate required warmup period"""
-        return self.long_window  # Longest MA period needed
-  
-        
     def calculate_indicators(self, data: pd.DataFrame) -> pd.DataFrame:
         """
         Calculate technical indicators used by the strategy.
