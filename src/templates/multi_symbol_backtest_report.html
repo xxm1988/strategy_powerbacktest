@@ -1569,20 +1569,29 @@
                                     lineWidth: 1,
                                     radius: 8
                                 },
-                                tooltip: {
-                                    pointFormat: point.text
-                                }
+                                tooltip: point.text
                             };
-                        }),
-                        tooltip: {
-                            pointFormat: '{point.tooltip}'
-                        }
+                        })
                     }],
                     tooltip: {
                         shared: true,
                         split: false,
                         valuePrefix: '$',
-                        valueDecimals: 2
+                        valueDecimals: 2,
+                        // Add formatter to handle both price and trade points
+                        formatter: function() {
+                            let s = '<b>' + Highcharts.dateFormat('%Y-%m-%d %H:%M:%S', this.x) + '</b>';
+                            
+                            this.points.forEach(function(point) {
+                                if (point.series.name === 'Price') {
+                                    s += '<br/>Price: $' + point.y.toFixed(2);
+                                } else if (point.series.name === 'Trade Points') {
+                                    s += '<br/>' + (point.point.tooltip || '');
+                                }
+                            });
+                            
+                            return s;
+                        }
                     },
                     rangeSelector: {
                         enabled: true,
