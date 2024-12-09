@@ -1,7 +1,6 @@
 from typing import Dict, List, Any
 import pandas as pd
 import numpy as np
-from datetime import datetime
 
 
 class ReturnMetrics:

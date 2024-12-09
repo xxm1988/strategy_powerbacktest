@@ -1,12 +1,10 @@
 from dataclasses import dataclass
 from typing import Dict, List, Any
 import pandas as pd
-from ..engine.fundamental_data import FundamentalData
 from dataclasses import dataclass
 from typing import Dict, List, Any, Optional
 import pandas as pd
 from datetime import datetime
-from ..engine.fundamental_data import FundamentalData
 
 
 @dataclass
@@ -52,8 +50,6 @@ class BacktestReport:
             portfolio (pd.DataFrame): Portfolio value and returns history
             trades (List[Dict[str, Any]]): Detailed trade history
             monthly_returns (pd.DataFrame): Monthly return statistics
-        Fundamental Data:
-            fundamental_data (FundamentalData): Company fundamental data
         Benchmark Data:
             benchmark_data (pd.DataFrame): Benchmark portfolio value history
     """
@@ -104,7 +100,6 @@ class BacktestReport:
     portfolio: pd.DataFrame
     trades: List[Dict[str, Any]]
     monthly_returns: pd.DataFrame
-    fundamental_data: FundamentalData
     benchmark_data: pd.DataFrame
 
     @classmethod

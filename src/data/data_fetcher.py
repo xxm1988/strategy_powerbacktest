@@ -2,7 +2,6 @@ from futu import *
 from typing import List, Dict, Any
 import pandas as pd
 from datetime import datetime
-import logging
 from src.utils.logger import setup_logger
 from src.utils.timeframe import get_kl_type
 from src.utils.data_resampler import resample_ohlcv

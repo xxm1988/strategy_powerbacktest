@@ -2,7 +2,6 @@ import pandas as pd
 from typing import Dict, Optional
 import sqlite3
 import json
-from pathlib import Path
 from ..utils.logger import setup_logger
 
 logger = setup_logger(__name__)
