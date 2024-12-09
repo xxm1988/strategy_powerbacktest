@@ -94,4 +94,4 @@ class BacktestRunner:
         os.makedirs(output_dir, exist_ok=True)
         results.generate_report(output_dir)
 
-        return os.path.join(output_dir, "multi_symbol_backtest_report.html")
+        return os.path.join(output_dir, "strategy_backtest_report.html")

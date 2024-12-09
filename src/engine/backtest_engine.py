@@ -11,7 +11,7 @@ from .portfolio import Portfolio
 from .metrics.return_metrics import ReturnMetrics
 from .metrics.risk_metrics import RiskMetrics
 from .metrics.trade_metrics import TradeMetrics
-from .multi_symbol_backtest_report import MultiSymbolBacktestReport
+from .strategy_backtest_report import StrategyBacktestReport
 from .symbol_results import SymbolResults
 from .benchmark_portfolio import BenchmarkPortfolio
 
@@ -383,7 +383,7 @@ class BacktestEngine:
         data_dict: Dict[str, pd.DataFrame],
         start_date: datetime,
         end_date: datetime,
-    ) -> MultiSymbolBacktestReport:
+    ) -> StrategyBacktestReport:
         """
         Execute backtest for multiple symbols.
 
@@ -401,7 +401,7 @@ class BacktestEngine:
             symbol_results[symbol] = SymbolResults.from_backtest_report(report)
 
         # Create multi-symbol report
-        return MultiSymbolBacktestReport(
+        return StrategyBacktestReport(
             strategy_name=self.strategy.__class__.__name__,
             start_date=pd.to_datetime(
                 min(data.index.min() for data in data_dict.values())

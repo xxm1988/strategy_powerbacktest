@@ -11,7 +11,7 @@ import json
 
 
 @dataclass
-class MultiSymbolBacktestReport:
+class StrategyBacktestReport:
     """Multi-symbol backtest report with aggregated metrics and per-symbol analysis"""
 
     strategy_name: str
@@ -178,7 +178,7 @@ class MultiSymbolBacktestReport:
     def generate_report(self, output_dir: str) -> None:
         """Generate HTML report for multi-symbol backtest"""
         template_path = os.path.join(
-            os.path.dirname(__file__), "../templates/multi_symbol_backtest_report.html"
+            os.path.dirname(__file__), "../templates/strategy_backtest_report.html"
         )
         with open(template_path, "r") as f:
             template = Template(f.read())
@@ -378,6 +378,6 @@ class MultiSymbolBacktestReport:
         os.makedirs(output_dir, exist_ok=True)
 
         # Write HTML file
-        output_path = os.path.join(output_dir, "multi_symbol_backtest_report.html")
+        output_path = os.path.join(output_dir, "strategy_backtest_report.html")
         with open(output_path, "w") as f:
             f.write(html_content)
