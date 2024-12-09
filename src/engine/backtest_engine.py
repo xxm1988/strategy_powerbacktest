@@ -1,18 +1,15 @@
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
 import pandas as pd
-import numpy as np
 from datetime import datetime
 from logging import Logger
 from src.strategy.base_strategy import BaseStrategy
 from src.utils.logger import setup_logger
-from .backtest_report import BacktestReport
-from .portfolio import Portfolio
 from .metrics.return_metrics import ReturnMetrics
 from .metrics.risk_metrics import RiskMetrics
 from .metrics.trade_metrics import TradeMetrics
 from .strategy_backtest_report import StrategyBacktestReport
-from .symbol_results import SymbolResults
+from .symbol_results import SymbolResults, BacktestReport
 from .benchmark_portfolio import BenchmarkPortfolio
 
 

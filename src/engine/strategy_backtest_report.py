@@ -7,7 +7,6 @@ import os
 from jinja2 import Template
 from .symbol_results import SymbolResults
 import logging
-import json
 
 
 @dataclass
