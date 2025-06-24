@@ -100,6 +100,7 @@ class BacktestReport:
     portfolio: pd.DataFrame
     trades: List[Dict[str, Any]]
     monthly_returns: pd.DataFrame
+    fundamental_data: Optional[pd.DataFrame]
     benchmark_data: pd.DataFrame
 
     @classmethod
